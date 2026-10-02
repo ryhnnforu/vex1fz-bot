@@ -205,6 +205,36 @@ const commands = [
     run: (m, sock) => sendMenu(m, sock, menu.menuOwnerText(), menu.menuOwnerSections())
   },
   {
+    name: 'menusticker',
+    aliases: ['stickermenu', 'menustiker'],
+    category: 'menu',
+    access: 'user',
+    prefixes: ['.'],
+    desc: 'Menu stiker (brat, smeme, iqc, dll)',
+    usage: '.menusticker',
+    run: (m, sock) => sendMenu(m, sock, menu.menuStickerText(), menu.menuStickerSections())
+  },
+  {
+    name: 'menugroup',
+    aliases: ['groupmenu', 'menugrup'],
+    category: 'menu',
+    access: 'user',
+    prefixes: ['.'],
+    desc: 'Menu grup (kick, hidetag, welcome, bungkam, dll)',
+    usage: '.menugroup',
+    run: (m, sock) => sendMenu(m, sock, menu.menuGroupText(), menu.menuGroupSections())
+  },
+  {
+    name: 'menuai',
+    aliases: ['aimenu'],
+    category: 'menu',
+    access: 'user',
+    prefixes: ['.'],
+    desc: 'Menu fitur AI (chat, gambar, kode, terjemah, dll)',
+    usage: '.menuai',
+    run: (m, sock) => sendMenu(m, sock, menu.menuAiText(), menu.menuAiSections())
+  },
+  {
     name: 'menudonasi',
     aliases: ['donasimenu'],
     category: 'menu',

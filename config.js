@@ -78,7 +78,9 @@ module.exports = {
   downloaderEndpoints: {
     instagram: (process.env.INSTAGRAM_API || '').split(',').filter(Boolean),
     facebook: (process.env.FACEBOOK_API || '').split(',').filter(Boolean),
-    twitter: (process.env.TWITTER_API || '').split(',').filter(Boolean)
+    twitter: (process.env.TWITTER_API || '').split(',').filter(Boolean),
+    youtube: (process.env.YOUTUBE_API || '').split(',').filter(Boolean),
+    generic: (process.env.GENERIC_DL_API || '').split(',').filter(Boolean)
   },
 
   /* ── Path ──────────────────────────────────────────────── */

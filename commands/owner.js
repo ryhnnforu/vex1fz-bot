@@ -6,7 +6,8 @@
  *
  * Semua command di file ini HANYA bisa dipanggil lewat prefix owner.
  */
-const { jidNormalizedUser, downloadMediaMessage } = require('@whiskeysockets/baileys')
+const fs = require('fs')
+const { wa } = require('../lib/wa')
 const db = require('../lib/db')
 const ai = require('../lib/ai')
 const config = require('../config')
@@ -34,6 +35,7 @@ function ensureGroup(m) {
 
 async function ensureBotAdmin(sock, m) {
   if (!ensureGroup(m)) return false
+  const { jidNormalizedUser } = wa()
   const meta = await getMeta(sock, m.chat)
   const botId = jidNormalizedUser(sock.user?.id || '')
   const me = meta.participants.find(p => jidNormalizedUser(p.id) === botId)
@@ -45,149 +47,6 @@ async function ensureBotAdmin(sock, m) {
 }
 
 const commands = [
-  /* ══════════════ PREFIX "/" — OWNER GRUP ══════════════ */
-  {
-    name: 'kick',
-    aliases: ['keluarkan'],
-    category: 'owner-grup',
-    access: 'owner',
-    prefixes: ['/'],
-    desc: 'Keluarkan member dari grup',
-    usage: '/kick @user',
-    async run(m, sock) {
-      if (!await ensureBotAdmin(sock, m)) return
-      const target = targetOf(m)
-      if (!target) return m.reply('Tag member yang mau dikeluarkan: */kick @user*')
-      await sock.groupParticipantsUpdate(m.chat, [target], 'remove')
-      m.reply(`✅ Berhasil mengeluarkan @${target.split('@')[0]}`, { mentions: [target] })
-    }
-  },
-  {
-    name: 'promote',
-    aliases: ['naikkan'],
-    category: 'owner-grup',
-    access: 'owner',
-    prefixes: ['/'],
-    desc: 'Jadikan admin grup',
-    usage: '/promote @user',
-    async run(m, sock) {
-      if (!await ensureBotAdmin(sock, m)) return
-      const target = targetOf(m)
-      if (!target) return m.reply('Tag member: */promote @user*')
-      await sock.groupParticipantsUpdate(m.chat, [target], 'promote')
-      m.reply(`✅ @${target.split('@')[0]} sekarang *ADMIN*`, { mentions: [target] })
-    }
-  },
-  {
-    name: 'demote',
-    aliases: ['turunkan'],
-    category: 'owner-grup',
-    access: 'owner',
-    prefixes: ['/'],
-    desc: 'Cabut admin grup',
-    usage: '/demote @user',
-    async run(m, sock) {
-      if (!await ensureBotAdmin(sock, m)) return
-      const target = targetOf(m)
-      if (!target) return m.reply('Tag member: */demote @user*')
-      await sock.groupParticipantsUpdate(m.chat, [target], 'demote')
-      m.reply(`✅ @${target.split('@')[0]} bukan admin lagi`, { mentions: [target] })
-    }
-  },
-  {
-    name: 'hidetag',
-    aliases: ['htag'],
-    category: 'owner-grup',
-    access: 'owner',
-    prefixes: ['/'],
-    desc: 'Tag semua member (tersembunyi)',
-    usage: '/hidetag teks',
-    async run(m, sock, args) {
-      if (!ensureGroup(m)) return
-      const meta = await getMeta(sock, m.chat)
-      const jids = meta.participants.map(p => p.id)
-      await sock.sendMessage(m.chat, {
-        text: args.join(' ') || 'Halo semua 👋',
-        mentions: jids
-      })
-    }
-  },
-  {
-    name: 'tagall',
-    aliases: ['everyone'],
-    category: 'owner-grup',
-    access: 'owner',
-    prefixes: ['/'],
-    desc: 'Tag semua member (terlihat)',
-    usage: '/tagall teks',
-    async run(m, sock, args) {
-      if (!ensureGroup(m)) return
-      const meta = await getMeta(sock, m.chat)
-      const teks = args.join(' ') || 'Panggilan semua member'
-      const list = meta.participants.map((p, i) => `${i + 1}. @${p.id.split('@')[0]}`).join('\n')
-      await sock.sendMessage(m.chat, {
-        text: `📢 *${teks}*\n\n${list}`,
-        mentions: meta.participants.map(p => p.id)
-      })
-    }
-  },
-  {
-    name: 'open',
-    aliases: ['buka'],
-    category: 'owner-grup',
-    access: 'owner',
-    prefixes: ['/'],
-    desc: 'Buka grup (semua bisa kirim pesan)',
-    usage: '/open',
-    async run(m, sock) {
-      if (!await ensureBotAdmin(sock, m)) return
-      await sock.groupSettingUpdate(m.chat, 'not_announcement')
-      m.reply('✅ Grup *DIBUKA* — semua member bisa kirim pesan.')
-    }
-  },
-  {
-    name: 'close',
-    aliases: ['tutup'],
-    category: 'owner-grup',
-    access: 'owner',
-    prefixes: ['/'],
-    desc: 'Tutup grup (hanya admin)',
-    usage: '/close',
-    async run(m, sock) {
-      if (!await ensureBotAdmin(sock, m)) return
-      await sock.groupSettingUpdate(m.chat, 'announcement')
-      m.reply('🔒 Grup *DITUTUP* — hanya admin yang bisa kirim pesan.')
-    }
-  },
-  {
-    name: 'linkgc',
-    aliases: ['linkgroup'],
-    category: 'owner-grup',
-    access: 'owner',
-    prefixes: ['/'],
-    desc: 'Lihat link grup',
-    usage: '/linkgc',
-    async run(m, sock) {
-      if (!ensureGroup(m)) return
-      const code = await sock.groupInviteCode(m.chat)
-      m.reply(`🔗 https://chat.whatsapp.com/${code}`)
-    }
-  },
-  {
-    name: 'revoke',
-    aliases: ['resetlink'],
-    category: 'owner-grup',
-    access: 'owner',
-    prefixes: ['/'],
-    desc: 'Reset link grup',
-    usage: '/revoke',
-    async run(m, sock) {
-      if (!await ensureBotAdmin(sock, m)) return
-      const code = await sock.groupRevokeInvite(m.chat)
-      m.reply(`♻️ Link di-reset.\nLink baru: https://chat.whatsapp.com/${code}`)
-    }
-  },
-
   /* ══════════════ PREFIX "," — OWNER BOT ══════════════ */
   {
     name: 'bc',
@@ -351,6 +210,7 @@ const commands = [
       if (!q || !['imageMessage', 'stickerMessage'].includes(q.type)) {
         return m.reply('Reply/kirim foto dulu, lalu *,setpp*')
       }
+      const { downloadMediaMessage } = wa()
       const buffer = await downloadMediaMessage(q.message, 'buffer', {}, {
         logger: require('pino')({ level: 'silent' }),
         reuploadRequest: sock.updateMediaMessage
@@ -530,6 +390,186 @@ const commands = [
 
         default:
           return m.reply('Option tidak dikenal. Lihat: *,aiset lihat*')
+      }
+    }
+  },
+
+  /* ══════════════ OWNER BOT — STIKER EMOT (.setstc) ══════════════ */
+  {
+    name: 'setstc',
+    aliases: ['setemo', 'setstiker'],
+    category: 'owner-bot',
+    access: 'owner',
+    prefixes: [','],
+    desc: 'Atur stiker emote AI (reply stiker): marah/senang/bingung/random/default',
+    usage: 'reply stiker lalu: .setstc marah | .setstc list',
+    async run(m, sock, args) {
+      const sub = (args[0] || '').toLowerCase()
+      const valid = ['marah', 'senang', 'bingung', 'sayang', 'ngambek', 'netral', 'random', 'default']
+
+      if (!sub || sub === 'list' || sub === 'lihat') {
+        const stc = ai.stcCfg()
+        const rows = Object.keys(stc).length
+          ? Object.entries(stc).map(([k, v]) => `│ *${k}* → ${v}`).join('\n')
+          : '│ (belum ada pengaturan — semua bawaan)'
+        return m.reply(
+          boxLines('SETSTC — STIKER EMOTE AI', [
+            rows,
+            ``,
+            `│ Reply *stiker* lalu *.setstc marah*`,
+            `│ untuk mengatur emote kondisi itu.`,
+            `│ Kondisi: ${valid.join(' / ')}`,
+            `│ *random* = acak dari pack bawaan`,
+            `│ *default* = reset ke bawaan`
+          ])
+        )
+      }
+      if (!valid.includes(sub)) {
+        return m.reply(`Kondisi tidak dikenal.\nPilihan: ${valid.join(' / ')}\nContoh: *.setstc marah* (sambil reply stiker)`)
+      }
+
+      // mode tanpa reply
+      if (!m.quoted) {
+        if (sub === 'random') {
+          ai.setStcSource('default', 'random')
+          return m.reply('✅ Semua emote AI sekarang diacak dari pack bawaan.')
+        }
+        if (sub === 'default') {
+          const stc = ai.stcCfg()
+          for (const k of Object.keys(stc)) delete stc[k]
+          db.save()
+          return m.reply('♻️ Stiker emote dikembalikan ke bawaan.')
+        }
+        // tanpa reply utk kondisi tertentu → pakai pack bawaan untuk kondisi itu
+        ai.setStcSource(sub, 'default')
+        return m.reply(`✅ Emote *${sub}* memakai pack bawaan.\n(kirim juga reply *stiker* + *.setstc ${sub}* untuk pakai stiker custom)`)
+      }
+
+      // dengan reply → wajib stiker
+      if (m.quoted.type !== 'stickerMessage') {
+        return m.reply('Reply harus *stiker*.\nContoh: kirim/reply stiker → *.setstc marah*')
+      }
+      try {
+        const { downloadMediaMessage } = wa()
+        const buf = await downloadMediaMessage(m.quoted.message, 'buffer', {}, {
+          logger: require('pino')({ level: 'silent' }),
+          reuploadRequest: sock.updateMediaMessage
+        })
+        const file = await ai.setStcCustom(sub, buf)
+        await m.react('✅')
+        m.reply(`✅ Stiker emote *${sub}* tersimpan → ${file}\nAI akan mengirimnya saat kondisi *${sub}.`)
+      } catch (e) {
+        m.reply('⚠️ Gagal menyimpan stiker: ' + e.message)
+      }
+    }
+  },
+
+  /* ══════════════ OWNER BOT — UTIL LAIN ══════════════ */
+  {
+    name: 'getpp',
+    aliases: ['photoprofile'],
+    category: 'owner-bot',
+    access: 'owner',
+    prefixes: [','],
+    desc: 'Ambil foto profil WhatsApp seseorang',
+    usage: ',getpp @user | ,getpp 628xxx | reply pesan lalu ,getpp',
+    async run(m, sock, args) {
+      const target = m.mentions?.[0] || m.quoted?.sender ||
+        (args[0] ? args[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null)
+      if (!target) return m.reply('Tag/mention nomor atau reply pesan orangnya.\nContoh: *,getpp @user*')
+      try {
+        const url = await sock.profilePictureUrl(target, 'image')
+        const res = await fetch(url, { signal: AbortSignal.timeout(15_000) })
+        const buf = Buffer.from(await res.arrayBuffer())
+        await sock.sendMessage(m.chat, { image: buf, caption: `PP @${target.split('@')[0]}` }, { quoted: m.raw })
+      } catch (e) {
+        m.reply('⚠️ Foto profil tidak tersedia (private/tersimpan).')
+      }
+    }
+  },
+  {
+    name: 'react',
+    aliases: ['reaksi'],
+    category: 'owner-bot',
+    access: 'owner',
+    prefixes: [','],
+    desc: 'Kirim reaksi emoji ke sebuah pesan',
+    usage: 'reply pesan lalu: ,react 😂',
+    async run(m, sock, args) {
+      const emoji = args[0]
+      if (!emoji) return m.reply('Contoh: reply pesan → *,react 😂*')
+      if (!m.quoted) return m.reply('Reply dulu pesan yang mau direaksi.')
+      await sock.sendMessage(m.chat, { react: { text: emoji, key: m.quoted.key } })
+    }
+  },
+  {
+    name: 'idmsg',
+    aliases: ['msgid', 'idpesan'],
+    category: 'owner-bot',
+    access: 'owner',
+    prefixes: [','],
+    desc: 'Lihat ID pesan (reply pesan) — untuk keperluan developer',
+    usage: 'reply pesan lalu: ,idmsg',
+    async run(m) {
+      const q = m.quoted
+      if (!q) return m.reply('Reply pesan dulu → *,idmsg*')
+      m.reply(
+        boxLines('MESSAGE ID', [
+          `│ *CHAT*      : ${m.chat}`,
+          `│ *ID*        : ${q.key?.id || '-'}`,
+          `│ *PARTICIPANT*: ${q.key?.participant || '-'}`,
+          `│ *FROMME*    : ${!!q.key?.fromMe}`
+        ])
+      )
+    }
+  },
+  {
+    name: 'hapusbot',
+    aliases: ['delbot', 'deletebot'],
+    category: 'owner-bot',
+    access: 'owner',
+    prefixes: [','],
+    desc: 'Hapus pesan milik bot (reply pesan bot)',
+    usage: 'reply pesan bot lalu: ,hapusbot',
+    async run(m, sock) {
+      if (!m.quoted) return m.reply('Reply pesan *bot* yang mau dihapus → *,hapusbot*')
+      if (!m.quoted.key?.fromMe && !m.quoted.sender) return m.reply('Itu bukan pesan bot.')
+      try {
+        await sock.sendMessage(m.chat, { delete: m.quoted.key })
+        m.reply('✅ Pesan dihapus.')
+      } catch (e) {
+        m.reply('⚠️ Gagal hapus: ' + e.message)
+      }
+    }
+  },
+  {
+    name: 'backup',
+    aliases: ['backupdb'],
+    category: 'owner-bot',
+    access: 'owner',
+    prefixes: [','],
+    desc: 'Backup database bot jadi file zip',
+    usage: ',backup',
+    async run(m, sock) {
+      await m.react('📦')
+      try {
+        const AdmZip = require('adm-zip')
+        const zip = new AdmZip()
+        const dbFile = require('../config').dbFile
+        if (fs.existsSync(dbFile)) zip.addLocalFile(dbFile)
+        const pkg = require('path').join(__dirname, '..', 'package.json')
+        if (fs.existsSync(pkg)) zip.addLocalFile(pkg)
+        const buf = zip.toBuffer()
+        await sock.sendMessage(m.chat, {
+          document: buf,
+          fileName: `vex1fz-backup-${Date.now()}.zip`,
+          mimetype: 'application/zip',
+          caption: '📦 Backup database vex1fz'
+        }, { quoted: m.raw })
+        await m.react('✅')
+      } catch (e) {
+        await m.react('❌')
+        m.reply('⚠️ Backup gagal: ' + e.message)
       }
     }
   },

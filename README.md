@@ -1,11 +1,12 @@
 # 🤖 VEX1FZ BOT
 
-Bot WhatsApp **Baileys** dengan **ButtonList (tombol "Pilih")**, multi-prefix, minigame HTML
-(**InteractiveResponseMessage + HTML**), sistem RPG, fitur downloader & islami.
+Bot WhatsApp **Baileys** (via `ourin-baileys@9.0.21`) dengan **tombol "Pilih"**, multi-prefix, minigame HTML
+(**InteractiveResponseMessage + HTML**), sistem RPG, fitur downloader & islami — **201 fitur, semua submenu
+punya 20 fitur berbeda + deskripsinya**.
 
 | | |
 |---|---|
-| 🧩 Library | `@whiskeysockets/baileys` **7.0.0-rc14** |
+| 🧩 Library | `ourin-baileys` **9.0.21** (dynamic import) |
 | 🔤 Prefix user | `.` — untuk **semua user** |
 | 👑 Prefix owner | `/` `,` `=>` — **hanya owner** |
 | 👤 Owner | `6283199329104` (LID `168036921303189@lid`) |
@@ -14,28 +15,32 @@ Bot WhatsApp **Baileys** dengan **ButtonList (tombol "Pilih")**, multi-prefix, m
 
 ---
 
-## ✅ FITUR LENGKAP
+## ✅ FITUR LENGKAP — 201 FITUR (semua submenu isi 20)
 
-### Prefix `.` (semua user)
+| Kategori | Jumlah | Contoh fitur baru |
+|---|---|---|
+| **Sticker** | 20 | `.sticker` `.brat` `.smeme` `.qc` `.stalk` + **watermark `nama user • vex1fz bye ryhn`** |
+| **AI** | 20 | `.ai` `.genimage` `.aiset` `.setstc` `.aireset` — emosi dinamis, lihat gambar, kirim stiker |
+| **Group** | 20 | `.h` `.swgc` `.kick` `.add` `.bungkam` welcome/goodbye canvas `.setwelcome` `.setgoodbye` |
+| **General** | 20 | `.ping` `.menu` `.menugame` `.donasi` `.minigame` + game HTML |
+| **Downloader** | 20 | `.ytmp3` `.ytmp4` `.play` `.tiktok` `.spotify` `.gitclone` `.reddit` |
+| **Owner** | 21 | `,setstc` `,bc` `,ban` `,aiset` `,backup` `,idmsg` |
+| **Game** | 20 | `.suit` `.ttt` `.blackjack` `.gacha` `.tebakbendera` `.kuisidn` `.ngetik` |
+| **RPG** | 20 | `.rpgdaftar` `.adventure` `.boss` `.kerja` `.mine` `.fish` `.bank` `.arena` `.quest` |
+| **Islami** | 20 | `.quran` `.kisahnabi` `.hadis` `.dzikir` `.tasbih` `.zakat` `.jadwalbulan` `.hijriah` |
+| **Profile** | 20 | `.daftar` `.profile` `.kartu` `.setttl` `.umur` `.ultah` `.ship` `.afk` `.medali` |
+
+### Ringkasan perintah populer (prefix `.`)
 | Perintah | Fungsi |
 |---|---|
-| `.ping` | Cek respon — animasi bar `▰▱▱▱` + box hasil terstruktur |
-| `.menu` | Menu utama — kotak INFO BOT / INFO USER + **list "Pilih"** |
-| `.menuowner` | Panduan prefix owner + daftar command owner |
-| `.menudonasi` | Menu donasi (Dana/GoPay/Ovo/Saweria) |
-| `.menugame` | Menu game (suit, math, tebak, slot, minigame) |
-| `.menurpg` | Menu RPG — **tiap game RPG punya struktur sendiri** |
-| `.menuislami` | Menu islami (quran, shalat, doa, asmaulhusna) |
-| `.menuprofile` | Menu profile (daftar, profile, leaderboard) |
-| `.menudownloader` | TikTok ✅, Instagram, Facebook, MediaFire ✅, Twitter |
-| `.minigame` | Pilihan game HTML: **dino, flappybird, catur, geometridash** |
-| `.dino` `.flappybird` `.catur` `.geometridash` | Buka game (InteractiveResponse + HTML + tombol MAIN) |
-| `.ai` `.sticker` `.aireset` | AI chatbot + ubah media jadi stiker |
-| `.owner` `.help` `.donasi [nama]` | Info & bantuan |
-| `.suit` `.math` `.tebak` `.slot` | Game teks |
-| `.rpgdaftar` `.rpgprofile` `.adventure` `.boss` `.shop` `.beli` `.inventory` `.daily` `.leaderboard` | RPG lengkap |
-| `.quran` `.shalat` `.doa` `.asmaulhusna` | Islami |
-| `.daftar` `.profile` | Profile |
+| `.ping` `.menu` `.help` | Menu utama — kotak INFO + **list "Pilih"** |
+| `.menusticker` `.menuowner` `.menugroup` `.menugame` `.menurpg` `.menuislami` `.menuprofile` `.menudownloader` | Semua submenu dengan **tombol "Pilih"** + 20 baris deskripsi |
+| `.minigame` `.dino` `.flappybird` `.catur` `.geometridash` | Game HTML via InteractiveResponseMessage |
+| `.sticker` `.brat` `.smeme` `.qc` | Stiker & teks (ada watermark) |
+| `.ai` (reply pesan AI juga bisa) | Chatbot karakter — balas pesan bot = AI aktif |
+| `.rpgdaftar` → `.adventure` `.shop` `.kerja` `.arena` `.quest` | RPG lengkap per chat |
+| `.quran` `.shalat` `.kisahnabi` `.hadis` `.tasbih` | Islami |
+| `.kartu` `.leaderboard` `.medali` `.afk` | Profile |
 
 ### Prefix `/` (owner — grup)
 `/kick` `/promote` `/demote` `/hidetag` `/tagall` `/open` `/close` `/linkgc` `/revoke`
@@ -311,7 +316,7 @@ vex1fz-bot/
 | Pairing code tidak muncul | Pastikan `LOGIN_MODE=pairing`, cek koneksi internet, tunggu 5 detik |
 | `session logout` | Hapus folder `auth/` → login ulang |
 | Link game tidak kebuka (panel) | Isi `PUBLIC_URL` = `https://domain:port` panel |
-| Tombol list tidak muncul | Update WhatsApp kamu; pastikan Baileys `7.0.0-rc14` (`npm ls @whiskeysockets/baileys`) |
+| Tombol list tidak muncul | Update WhatsApp kamu; pastikan `ourin-baileys@9.0.21` (`npm ls ourin-baileys`) |
 | `npm install` error di Termux (better-sqlite3/sharp/canvas) | Jalankan `pkg install python make clang -y` lalu ulangi; jika tetap gagal: `npm install --ignore-scripts` (module native dilewati — tidak dipakai bot ini) |
 | IG/FB gagal | Lihat bagian **Downloader** di atas |
 | Port bentrok | Ganti `PORT` di `.env` |
@@ -324,7 +329,6 @@ vex1fz-bot/
 vex1fz-bot@1.0.0
 +-- @ffmpeg-installer/ffmpeg@1.1.0
 +-- @napi-rs/canvas@1.0.8
-+-- @whiskeysockets/baileys@7.0.0-rc14
 +-- adm-zip@0.6.0
 +-- axios@1.20.0
 +-- better-sqlite3@12.11.1
@@ -343,6 +347,7 @@ vex1fz-bot@1.0.0
 +-- node-cache@5.1.2
 +-- node-os-utils@3.1.0
 +-- node-webpmux@3.2.1
++-- ourin-baileys@9.0.21
 +-- pdfkit@0.19.1
 +-- performance-now@2.1.0
 +-- pino@10.3.1
@@ -351,7 +356,7 @@ vex1fz-bot@1.0.0
 +-- similarity@1.2.1
 +-- ssh2@1.17.0
 +-- unzipper@0.12.5
-`-- xlsx@0.18.5
++-- xlsx@0.18.5
 ```
 
 ---
@@ -410,4 +415,4 @@ git push -u origin main
 - Bot **tidak** memproses pesan dari nomornya sendiri.
 - Gunakan bot dengan bijak — penyalahgunaan (spam/broadcast ke orang asing) bukan tanggung jawab developer.
 
-**vex1fz bot** — Baileys 7.0.0-rc14 • Node.js ≥ 18 • MIT
+**vex1fz bot** — ourin-baileys 9.0.21 • 201 fitur • Node.js ≥ 18 • MIT

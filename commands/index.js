@@ -13,6 +13,8 @@ const islami = require('./islami')
 const profile = require('./profile')
 const owner = require('./owner')
 const ai = require('./ai')
+const sticker = require('./sticker')
+const group = require('./group')
 
 const all = [
   ...general,
@@ -22,7 +24,9 @@ const all = [
   ...islami,
   ...profile,
   ...owner,
-  ...ai
+  ...ai,
+  ...sticker,
+  ...group
 ]
 
 const byName = new Map()

@@ -16,7 +16,6 @@
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "1.1.0",
     "@napi-rs/canvas": "1.0.8",
-    "@whiskeysockets/baileys": "7.0.0-rc14",
     "adm-zip": "0.6.0",
     "axios": "1.20.0",
     "better-sqlite3": "12.11.1",
@@ -35,6 +34,7 @@
     "node-cache": "5.1.2",
     "node-os-utils": "3.1.0",
     "node-webpmux": "3.2.1",
+    "ourin-baileys": "9.0.21",
     "pdfkit": "0.19.1",
     "performance-now": "2.1.0",
     "pino": "10.3.1",

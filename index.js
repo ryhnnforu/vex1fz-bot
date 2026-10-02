@@ -10,14 +10,8 @@ const path = require('path')
 const util = require('util')
 const pino = require('pino')
 const qrcode = require('qrcode-terminal')
-const {
-  default: makeWASocket,
-  useMultiFileAuthState,
-  fetchLatestBaileysVersion,
-  DisconnectReason,
-  Browsers,
-  jidNormalizedUser
-} = require('@whiskeysockets/baileys')
+
+const { initWA, wa } = require('./lib/wa')
 
 const config = require('./config')
 const db = require('./lib/db')
@@ -25,6 +19,9 @@ const ai = require('./lib/ai')
 const { serialize } = require('./lib/serialize')
 const registry = require('./commands/index')
 const { log, sleep, truncate } = require('./lib/util')
+const { isGroupAdmin } = require('./lib/groupmeta')
+const { closestFeature } = require('./lib/typo')
+const greet = require('./lib/greet')
 const { startServer } = require('./server')
 
 const ownerJids = [
@@ -112,30 +109,29 @@ async function handle(m, sock) {
       if (m.isGroup) return
       return m.reply(`❓ Perintah *${prefix}${cmdName}* tidak dikenal.\nKetik *.menuowner* untuk daftar fitur owner.`)
     }
-    if (!cmd.prefixes.includes(prefix)) {
-      return m.reply(
-        `⚠️ *${cmd.name}* bukan perintah prefix *${prefix}*.\n` +
-        `Coba: *${cmd.prefixes[0]}${cmd.name}* atau lihat *.menuowner*`
-      )
-    }
+    // owner: semua command terdaftar bebas dipanggil dengan prefix owner
     return runOwner(cmd, m, sock)
   }
 
-  // ── PREFIX "." — semua user ──
+  // ── PREFIX "." — semua user (role dicek per command) ──
   const cmd = registry.resolve(cmdName)
   if (!cmd) {
-    if (!m.isGroup) {
-      m.reply(`❓ Perintah *${config.userPrefix}${cmdName}* tidak ada.\nKetik *${config.userPrefix}menu* untuk melihat semua fitur.`)
-    }
-    return
+    // fitur salah ketik → AI yang jawab (lihat handleUnknownCommand)
+    return handleUnknownCommand(m, sock, cmdName)
   }
   if (cmd.access === 'owner') {
+    // owner tetap boleh memakai "." sesuai permintaan; selain owner tetap dikunci
+    if (m.isOwner) return runOwner(cmd, m, sock)
     return m.reply(
-      `🔒 *${cmd.name}* khusus owner — gunakan prefix *${cmd.prefixes[0]}* (contoh: *${cmd.prefixes[0]}${cmdName}*).\n` +
+      `🔒 *${cmd.name}* khusus owner.\n` +
       `Info lengkap: *${config.userPrefix}menuowner*`
     )
   }
-  if (!cmd.prefixes.includes(prefix)) {
+  if (cmd.access === 'admin' && !m.isOwner) {
+    const adminOk = await isGroupAdmin(sock, m)
+    if (!adminOk) return m.reply(`🔒 *${cmd.name}* khusus *admin* grup.`)
+  }
+  if (!cmd.prefixes.includes(prefix) && !m.isOwner) {
     return m.reply(`⚠️ Gunakan prefix *${cmd.prefixes[0]}* untuk *${cmd.name}*`)
   }
 
@@ -161,11 +157,40 @@ async function handle(m, sock) {
     }
   }
 
+  // statistik pemakaian (untuk .level/.statistik/.medali)
+  if (m.user) {
+    if (!m.user.stats) m.user.stats = { cmds: 0, firstAt: Date.now() }
+    m.user.stats.cmds = (m.user.stats.cmds || 0) + 1
+    db.save()
+  }
+
   try {
     await cmd.run(m, sock, m.args)
   } catch (e) {
     log.err(`command .${cmdName} error:`, e)
     try { await m.reply('⚠️ Terjadi kesalahan saat menjalankan perintah.\n' + truncate(String(e.message || e), 300)) } catch (_) {}
+  }
+}
+
+/* fitur tidak dikenal (salah ketik) → saran format persis / AI yang balas */
+async function handleUnknownCommand(m, sock, name) {
+  const match = closestFeature(name, { owner: m.isOwner })
+  if (match) {
+    return m.reply(`lu salah mengetik fitur, ketiklah ini '${match.name}'`)
+  }
+  const aiCfg = db.load().settings.ai
+  const aiEnabled = aiCfg ? aiCfg.enabled !== false : true
+  if (aiEnabled) {
+    try {
+      return await ai.handleAI(sock, m, { text: m.text })
+    } catch (e) {
+      log.err('ai (unknown cmd):', e)
+    }
+  }
+  if (!m.isGroup) {
+    return m.reply(
+      `❓ Fitur *${config.userPrefix}${name}* nggak ada.\nKetik *${config.userPrefix}menu* buat lihat semua fitur.`
+    )
   }
 }
 
@@ -184,6 +209,10 @@ async function runOwner(cmd, m, sock) {
 
 /* ═══════════ koneksi ═══════════ */
 async function startBot() {
+  const w = wa()
+  const makeWASocket = w.default
+  const { useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason, Browsers } = w
+
   const { state, saveCreds } = await useMultiFileAuthState(config.sessionDir)
   const { version } = await fetchLatestBaileysVersion()
 
@@ -196,6 +225,34 @@ async function startBot() {
     markOnlineOnConnect: false,
     generateHighQualityLinkPreview: false,
     options: { timeout: 60_000 }
+  })
+
+  /* ── lacak ID pesan bot (untuk deteksi "user membalas pesan AI/bot") ── */
+  const botMsgIds = new Set()
+  const origSend = sock.sendMessage.bind(sock)
+  sock.sendMessage = async (jid, content, opts) => {
+    const r = await origSend(jid, content, opts)
+    try {
+      if (r?.key?.id) {
+        botMsgIds.add(r.key.id)
+        if (botMsgIds.size > 800) botMsgIds.clear()
+      }
+    } catch (_) {}
+    return r
+  }
+
+  /* ── welcome / goodbye otomatis ── */
+  sock.ev.on('group-participants.update', async ({ id, participants, action }) => {
+    try {
+      const botJid = (sock.user?.id || '').split(':')[0].split('@')[0]
+      for (const p of participants) {
+        if (p.split('@')[0] === botJid) continue
+        if (action === 'add') await greet.sendWelcome(sock, id, p)
+        else if (action === 'remove') await greet.sendGoodbye(sock, id, p)
+      }
+    } catch (e) {
+      log.warn('event peserta grup:', e.message)
+    }
   })
 
   let codeTries = 0
@@ -301,11 +358,87 @@ async function startBot() {
         // mode self
         if ((db.load().settings.mode || config.mode) === 'self' && !m.isOwner) continue
 
+        // ── BUNGKAM: hapus semua pesan user yang sedang dibungkam ──
+        {
+          const settings0 = db.load().settings
+          const muted = settings0.muted || {}
+          const mute = muted[m.sender]
+          if (mute) {
+            const now = Date.now()
+            if (mute.until > now && mute.chat === m.chat) {
+              try {
+                await sock.sendMessage(m.chat, { delete: m.key })
+              } catch (e) {
+                log.warn('hapus pesan bungkam gagal (bot perlu admin):', e.message)
+              }
+              continue
+            } else if (mute.until <= now) {
+              delete muted[m.sender]
+              db.save()
+            }
+          }
+        }
+
+        // ── AFK: user kembali dari AFK / mention user yang AFK ──
+        {
+          const st = db.load().settings
+          if (!st.afk) st.afk = {}
+          const own = st.afk[m.sender]
+          if (own && !m.isOwner) {
+            const dur = Math.max(1, Math.round((Date.now() - (own.since || Date.now())) / 60000))
+            delete st.afk[m.sender]
+            db.save()
+            if (m.isGroup) {
+              await sock.sendMessage(m.chat, {
+                text: `👋 @${m.sender.split('@')[0]} kembali dari AFK (${dur} menit lalu${own.reason ? ' • ' + own.reason : ''})`,
+                mentions: [m.sender]
+              })
+            }
+          }
+          if (m.mentions?.length) {
+            const rows = []
+            for (const j of m.mentions) {
+              const a = st.afk[j]
+              if (a) rows.push(`@${j.split('@')[0]} lagi AFK${a.reason ? ' — ' + a.reason : ''} (sejak ${Math.round((Date.now() - (a.since || Date.now())) / 60000)} menit lalu)`)
+            }
+            if (rows.length) {
+              await sock.sendMessage(m.chat, { text: rows.join('\n'), mentions: m.mentions })
+            }
+          }
+        }
+
+        // ── ANTILINK: hapus pesan berisi link grup/channel ──
+        if (m.isGroup && !m.isOwner) {
+          const gc = (db.load().settings.groupcfg || {})[m.chat]
+          if (gc?.antilink && /chat\.whatsapp\.com\/|whatsapp\.com\/channel\//i.test(m.text || '')) {
+            const adminOk = await isGroupAdmin(sock, m)
+            if (!adminOk) {
+              try {
+                await sock.sendMessage(m.chat, { delete: m.key })
+                await sock.sendMessage(m.chat, {
+                  text: `🚫 @${m.sender.split('@')[0]} link grup/channel dilarang di sini, pesan dihapus.`,
+                  mentions: [m.sender]
+                })
+              } catch (e) {
+                log.warn('antilink gagal hapus (bot perlu admin):', e.message)
+              }
+              continue
+            }
+          }
+        }
+
         // ── AI chatbot: balasan ke pesan bot / auto mode (tanpa prefix) ──
         if (!m.prefix || !m.command) {
           const aiCfg = db.load().settings.ai
           const enabled = aiCfg ? aiCfg.enabled !== false : true
-          const replyToBot = !!m.quoted?.key?.fromMe
+          // deteksi reply ke pesan bot: via fromMe QUOTE atau ID pesan yang pernah bot kirim
+          // (contextInfo.participant di chat pribadi sering tidak diisi → jangan andalkan itu saja)
+          let replyToBot = !!m.quoted?.key?.fromMe
+          if (!replyToBot && m.quoted?.key?.id) replyToBot = botMsgIds.has(m.quoted.key.id)
+          if (!replyToBot && m.quoted && !m.isGroup) {
+            const botJid = (sock.user?.id || '').split(':')[0]
+            replyToBot = !!botJid && m.quoted.sender === botJid
+          }
           const autoOk = aiCfg?.auto && !m.isGroup && !m.prefix
           if (enabled && (replyToBot || autoOk)) {
             try {
@@ -338,6 +471,7 @@ async function startBot() {
   console.log('\x1b[0m')
 
   db.load()
+  await initWA() // ESM ourin-baileys wajib di-load sebelum startBot
   startServer()
   log.info(`prefix user: "${config.userPrefix}" | prefix owner: ${config.ownerPrefixes.join(' ')}`)
   log.info(`owner: ${config.ownerNumber} | lid: ${config.ownerLid}`)
