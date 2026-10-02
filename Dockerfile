@@ -3,7 +3,9 @@ FROM node:20-slim
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm install --omit=dev
+# --ignore-scripts: lewati build native (better-sqlite3 dll) yang bikin build gagal di Railway.
+# sharp/ffmpeg tetap jalan karena binary-nya dari optional package (sudah diverifikasi).
+RUN npm install --omit=dev --ignore-scripts
 
 COPY . .
 
