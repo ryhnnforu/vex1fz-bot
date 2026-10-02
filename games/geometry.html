@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Geometry Dash — vex1fz</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; background:#0b0b16; font-family:'Trebuchet MS',Arial,sans-serif; overflow:hidden; }
+  body { display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  #wrap { position:relative; width:100%; max-width:560px; }
+  canvas { display:block; width:100%; background:#12121f; touch-action:manipulation; }
+  .hint { color:#7df9ff; font-size:12px; margin-top:8px; text-shadow:0 0 8px #0ff; letter-spacing:2px; text-align:center; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="560" height="320"></canvas>
+  <div class="hint">◆ TAP / SPASI — lompati spike! Tema NEON ◆</div>
+</div>
+<script>
+/* ═══ GEOMETRY DASH — kubus neon, spike, progres % ═══ */
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+const GY = H - 56;                 // garis lantai
+const CUBE = 32;
+const FINISH = 2600;               // jarak akhir (px) → 100%
+
+let cube, spikes, speed, dist, attempts, dead, deadT, frame, stars, mode, hue;
+
+function reset() {
+  cube = { x: 80, y: GY - CUBE, vy: 0, rot: 0, ground: true };
+  spikes = []; speed = 6.4; dist = 0; dead = false; deadT = 0;
+  stars = Array.from({ length: 46 }, () => ({ x: Math.random() * W, y: Math.random() * (GY - 40), s: Math.random() * 2 + 0.6 }));
+  mode = 0; hue = 185;
+  if (spikes.length === 0) spawnAhead();
+}
+function spawnAhead() {
+  // isi rintangan sampai 1.6 layar ke depan
+  const target = dist + W * 2;
+  let lastX = spikes.length ? spikes[spikes.length - 1].x : W * 0.7;
+  while (lastX < target) {
+    const gap = 140 + Math.random() * 170;
+    lastX += gap;
+    const kind = Math.random();
+    if (kind < 0.72) spikes.push({ x: lastX, type: 'spike' });
+    else if (kind < 0.88) spikes.push({ x: lastX, type: 'block' });
+    else { spikes.push({ x: lastX, type: 'double' }); lastX += 34; }
+  }
+}
+function jump() {
+  if (dead) { if (deadT > 24) { attempts++; reset(); } return; }
+  if (cube.ground) { cube.vy = -11.6; cube.ground = false; }
+}
+addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); jump(); } });
+cv.addEventListener('pointerdown', jump);
+
+function update() {
+  frame++;
+  if (dead) { deadT++; return; }
+  // speed ramp + hue drift (neon berputar)
+  speed = 6.4 + Math.min(4.6, dist / 550);
+  dist += speed;
+  hue = 185 + Math.sin(frame / 60) * 40 + dist / 60;
+  if (dist >= FINISH) { dist = FINISH; win(); }
+
+  cube.vy += 0.72; cube.y += cube.vy;
+  if (cube.y >= GY - CUBE) { cube.y = GY - CUBE; cube.vy = 0; cube.ground = true; }
+  if (cube.ground) { // snap rotasi per90°
+    const q = Math.PI / 2;
+    cube.rot += (Math.round(cube.rot / q) * q - cube.rot) * 0.3;
+  } else cube.rot += 0.13;
+
+  spawnAhead();
+  // tabrakan
+  const cx1 = cube.x + 4, cx2 = cube.x + CUBE - 4;
+  const cy1 = cube.y + 4, cy2 = cube.y + CUBE - 2;
+  for (const s of spikes) {
+    const sx = s.x - dist;
+    if (sx > cx2 + 6 || sx + 34 < cx1 - 6) continue;
+    if (s.type === 'spike' || s.type === 'double') {
+      const tipX = sx + 17;
+      if (cx2 > sx + 4 && cx1 < sx + 30 && cy2 > GY - 34) {
+        if (cx2 > sx - 2 && cx1 < sx + 36 && cy2 > GY - 30) return die();
+      }
+    } else { // block
+      if (cx2 > sx + 2 && cx1 < sx + 32 && cy2 > GY - 34 && cy1 < GY) return die();
+    }
+  }
+}
+function die() { dead = true; deadT = 0; }
+function win() { dead = true; deadT = -999; } // menang
+
+function draw() {
+  // latar gradien neon
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, `hsl(${hue},45%,12%)`);
+  g.addColorStop(1, `hsl(${hue + 60},50%,7%)`);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+  // bintang bergerak
+  ctx.fillStyle = '#ffffffaa';
+  for (const st of stars) {
+    let x = (st.x - dist * 0.25) % W; if (x < 0) x += W;
+    ctx.fillRect(x, st.y, st.s, st.s);
+  }
+
+  // grid samar
+  ctx.strokeStyle = `hsla(${hue},80%,60%,.08)`;
+  ctx.lineWidth = 1;
+  for (let x = -(dist % 40); x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, GY); ctx.stroke(); }
+  for (let y = GY; y > 0; y -= 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+  // lantai neon
+  ctx.strokeStyle = `hsl(${hue},100%,62%)`;
+  ctx.shadowColor = `hsl(${hue},100%,60%)`; ctx.shadowBlur = 14;
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(0, GY); ctx.lineTo(W, GY); ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#0d0d1a'; ctx.fillRect(0, GY + 3, W, H - GY);
+
+  // rintangan
+  for (const s of spikes) {
+    const x = s.x - dist;
+    if (x < -60 || x > W + 60) continue;
+    if (s.type === 'spike' || s.type === 'double') {
+      drawSpike(x, GY); if (s.type === 'double') drawSpike(x + 34, GY);
+    } else {
+      ctx.fillStyle = `hsl(${(hue + 140) % 360},90%,55%)`;
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+      ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
+      ctx.fillRect(x, GY - 34, 34, 34);
+      ctx.strokeRect(x, GY - 34, 34, 34);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#12121f';
+      ctx.beginPath(); ctx.moveTo(x + 6, GY - 28); ctx.lineTo(x + 28, GY - 6); ctx.lineTo(x + 6, GY - 6); ctx.fill();
+    }
+  }
+
+  // kubus
+  ctx.save();
+  ctx.translate(cube.x + CUBE / 2, cube.y + CUBE / 2);
+  ctx.rotate(cube.rot);
+  const cCol = dead && deadT !== -999 ? '#ff4d6d' : `hsl(${(hue + 180) % 360},100%,60%)`;
+  ctx.shadowColor = cCol; ctx.shadowBlur = 18;
+  ctx.fillStyle = cCol;
+  ctx.fillRect(-CUBE/2, -CUBE/2, CUBE, CUBE);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+  ctx.strokeRect(-CUBE/2, -CUBE/2, CUBE, CUBE);
+  ctx.fillStyle = '#12121f';
+  ctx.fillRect(-7, -7, 14, 14);
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+  ctx.strokeRect(-7, -7, 14, 14);
+  ctx.restore();
+
+  // HUD
+  const pct = Math.min(100, Math.round((dist / FINISH) * 100));
+  ctx.fillStyle = '#0e0e1cdd';
+  ctx.fillRect(W/2 - 110, 10, 220, 16);
+  ctx.strokeStyle = '#fff5'; ctx.strokeRect(W/2 - 110, 10, 220, 16);
+  const bg = ctx.createLinearGradient(W/2 - 108, 0, W/2 + 108, 0);
+  bg.addColorStop(0, `hsl(${hue},100%,55%)`); bg.addColorStop(1, `hsl(${(hue + 120) % 360},100%,55%)`);
+  ctx.fillStyle = bg;
+  ctx.fillRect(W/2 - 108, 12, 216 * (pct / 100), 12);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center';
+  ctx.fillText(pct + '%', W/2, 60);
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 14px Arial';
+  ctx.fillStyle = '#7df9ff';
+  ctx.fillText('ATTEMPT ' + attempts, 12, 24);
+
+  if (deadT === -999) {
+    ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#7df9ff'; ctx.shadowColor = '#0ff'; ctx.shadowBlur = 16;
+    ctx.font = 'bold 34px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('LEVEL COMPLETE!', W/2, H/2 - 8);
+    ctx.shadowBlur = 0;
+    ctx.font = '16px Arial'; ctx.fillStyle = '#fff';
+    ctx.fillText('TAP untuk main lagi', W/2, H/2 + 26);
+    ctx.textAlign = 'left';
+  } else if (dead) {
+    ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#ff4d6d'; ctx.font = 'bold 30px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('CRASH!', W/2, H/2 - 6);
+    ctx.fillStyle = '#fff'; ctx.font = '15px Arial';
+    ctx.fillText(deadT > 24 ? 'TAP untuk coba lagi' : `progress ${pct}%`, W/2, H/2 + 24);
+    ctx.textAlign = 'left';
+  }
+}
+function drawSpike(x, gy) {
+  ctx.fillStyle = `hsl(${(hue + 140) % 360},100%,60%)`;
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+  ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 12;
+  ctx.beginPath();
+  ctx.moveTo(x, gy); ctx.lineTo(x + 17, gy - 34); ctx.lineTo(x + 34, gy);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+attempts = 1; reset(); loop();
+</script>
+</body>
+</html>

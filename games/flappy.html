@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Flappy Bird — vex1fz</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; background:#4EC0CA; font-family:'Segoe UI',Arial,sans-serif; overflow:hidden; }
+  body { display:flex; align-items:center; justify-content:center; flex-direction:column; }
+  #wrap { position:relative; width:100%; max-width:480px; }
+  canvas { display:block; width:100%; background:#4EC0CA; touch-action:manipulation; }
+  .hint { text-align:#e8f8ff; color:#eafcff; font-size:12px; margin-top:6px; text-shadow:0 1px 2px rgba(0,0,0,.35); }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="400" height="560"></canvas>
+  <div class="hint">🐦 TAP / SPASI untuk KEPAK SAYAP</div>
+</div>
+<script>
+/* ═══ FLAPPY BIRD — tema klasik asli ═══ */
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+const GY = H - 80;             // tanah
+const PIPE_W = 58, GAP = 138;
+
+const BIRD = { x: 90, y: H/2, vy: 0, r: 14, rot: 0 };
+let pipes = [], frame = 0, score = 0, best = +(localStorage.getItem('flappy_best') || 0);
+let state = 'ready';           // ready | play | over
+let fly = 0, flash = 0, tGround = 0;
+
+function reset() {
+  BIRD.y = H/2; BIRD.vy = 0; BIRD.rot = 0;
+  pipes = []; score = 0; frame = 0; state = 'ready'; flash = 0;
+}
+function flap() {
+  if (state === 'ready') state = 'play';
+  else if (state === 'over') { reset(); return; }
+  BIRD.vy = -7.4; BIRD.rot = -0.45;
+  fly = 6;
+}
+addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); flap(); } });
+cv.addEventListener('pointerdown', flap);
+
+function spawnPipe() {
+  const h = 70 + Math.random() * (GY - GAP - 160);
+  pipes.push({ x: W + 10, top: h, passed: false });
+}
+
+function update() {
+  frame++;
+  if (state === 'play') {
+    BIRD.vy += 0.42; BIRD.y += BIRD.vy;
+    if (BIRD.vy > 0) BIRD.rot = Math.min(1.45, BIRD.rot + 0.06);
+    if (BIRD.y < -10) { BIRD.y = -10; BIRD.vy = 0; }
+    if (BIRD.y + BIRD.r > GY) return die();
+    if (frame % 88 === 0) spawnPipe();
+    const sp = 2.6;
+    for (const p of pipes) p.x -= sp;
+    pipes = pipes.filter(p => p.x > -PIPE_W - 10);
+    for (const p of pipes) {
+      if (!p.passed && p.x + PIPE_W < BIRD.x) { p.passed = true; score++; }
+      // tabrakan
+      const inX = BIRD.x + BIRD.r > p.x && BIRD.x - BIRD.r < p.x + PIPE_W;
+      if (inX && (BIRD.y - BIRD.r < p.top || BIRD.y + BIRD.r > p.top + GAP)) return die();
+    }
+  } else if (state === 'ready') {
+    BIRD.y = H/2 + Math.sin(frame / 14) * 8;
+  } else {
+    BIRD.vy += 0.42; BIRD.y += BIRD.vy;
+    if (BIRD.y + BIRD.r > GY) { BIRD.y = GY - BIRD.r; BIRD.vy = 0; }
+  }
+  if (fly > 0) fly--;
+  if (flash > 0) flash--;
+}
+function die() {
+  if (score > best) { best = score; localStorage.setItem('flappy_best', best); }
+  state = 'over'; flash = 20;
+}
+
+function cloud(x, y, s) {
+  ctx.fillStyle = 'rgba(255,255,255,.92)';
+  ctx.beginPath();
+  ctx.arc(x, y, 16*s, 0, 7); ctx.arc(x+18*s, y-8*s, 14*s, 0, 7);
+  ctx.arc(x+36*s, y, 15*s, 0, 7); ctx.fill();
+}
+function drawBg() {
+  // langit gradien
+  const g = ctx.createLinearGradient(0, 0, 0, GY);
+  g.addColorStop(0, '#59c4d4'); g.addColorStop(1, '#8fd9e6');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, GY);
+  // awan
+  const off = (frame * 0.3) % (W + 120);
+  cloud(W - off, 70, 1); cloud((W * 0.5) - off * 0.6, 130, 0.8); cloud(140 - off * 0.4, 45, 0.7);
+  // gedung jauh
+  ctx.fillStyle = '#82c8cf';
+  for (let i = 0; i < 9; i++) {
+    const x = i * 50 - (frame * 0.2) % 50;
+    const h = 50 + (i * 37 % 60);
+    ctx.fillRect(x, GY - h - 26, 42, h);
+  }
+}
+function drawPipe(p) {
+  const grad = ctx.createLinearGradient(p.x, 0, p.x + PIPE_W, 0);
+  grad.addColorStop(0, '#73BF2E'); grad.addColorStop(.5, '#98e058'); grad.addColorStop(1, '#5a9a22');
+  ctx.fillStyle = grad;
+  // atas
+  ctx.fillRect(p.x, 0, PIPE_W, p.top - 10);
+  ctx.fillRect(p.x - 4, p.top - 24, PIPE_W + 8, 24);
+  // bawah
+  const by = p.top + GAP;
+  ctx.fillRect(p.x, by + 14, PIPE_W, GY - by);
+  ctx.fillRect(p.x - 4, by, PIPE_W + 8, 24);
+  ctx.strokeStyle = '#43781a'; ctx.lineWidth = 2;
+  ctx.strokeRect(p.x - 4, p.top - 24, PIPE_W + 8, 24);
+  ctx.strokeRect(p.x - 4, by, PIPE_W + 8, 24);
+}
+function drawGround() {
+  ctx.fillStyle = '#ded895'; ctx.fillRect(0, GY, W, H - GY);
+  ctx.fillStyle = '#c8b96a';
+  for (let i = 0; i < 30; i++) {
+    const x = (i * 30 - (frame * 2.6) % 30);
+    ctx.beginPath(); ctx.moveTo(x, GY + 20); ctx.lineTo(x + 14, GY); ctx.lineTo(x + 28, GY + 20); ctx.fill();
+  }
+  ctx.strokeStyle = '#53382a'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(0, GY); ctx.lineTo(W, GY); ctx.stroke();
+}
+function drawBird() {
+  ctx.save();
+  ctx.translate(BIRD.x, BIRD.y);
+  ctx.rotate(state === 'play' || state === 'over' ? BIRD.rot : 0);
+  // badan
+  ctx.fillStyle = '#f8d22c';
+  ctx.beginPath(); ctx.ellipse(0, 0, 17, 13, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#b98b00'; ctx.lineWidth = 2; ctx.stroke();
+  // sayap
+  const wy = state === 'play' && fly > 0 ? -7 : (frame % 20 < 10 ? 2 : 6);
+  ctx.fillStyle = '#f2b632';
+  ctx.beginPath(); ctx.ellipse(-4, wy, 9, 6.5, -0.3, 0, 7); ctx.fill();
+  ctx.stroke();
+  // mata
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(8, -4, 5.5, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#53382a'; ctx.stroke();
+  ctx.fillStyle = '#222';
+  ctx.beginPath(); ctx.arc(10, -4, 2.4, 0, 7); ctx.fill();
+  // paruh
+  ctx.fillStyle = '#f26b1d';
+  ctx.beginPath();
+  ctx.moveTo(14, 1); ctx.lineTo(24, 3); ctx.lineTo(14, 7); ctx.closePath(); ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+function text(t, x, y, size, col, outline) {
+  ctx.font = `bold ${size}px Arial`;
+  ctx.textAlign = 'center';
+  if (outline) { ctx.strokeStyle = outline; ctx.lineWidth = size / 7; ctx.strokeText(t, x, y); }
+  ctx.fillStyle = col; ctx.fillText(t, x, y);
+}
+function panel(x, y, w, h) {
+  ctx.fillStyle = '#ded895';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = '#53382a'; ctx.lineWidth = 4; ctx.strokeRect(x, y, w, h);
+}
+function draw() {
+  drawBg();
+  for (const p of pipes) drawPipe(p);
+  drawGround();
+  drawBird();
+  // skor
+  text(score, W / 2, 66, 44, '#fff', '#53382a');
+  if (state === 'ready') {
+    text('FLAPPY BIRD', W / 2, 170, 30, '#fff', '#53382a');
+    text('TAP / SPASI untuk mulai', W / 2, 205, 15, '#fff', '#53382a');
+  }
+  if (state === 'over') {
+    panel(W/2 - 110, H/2 - 90, 220, 170);
+    text('GAME OVER', W/2, H/2 - 55, 26, '#e2503c', '#7a2417');
+    text(`SKOR  ${score}`, W/2, H/2 - 12, 20, '#53382a');
+    text(`BEST  ${best}`, W/2, H/2 + 20, 16, '#53382a');
+    text('TAP untuk ulang', W/2, H/2 + 56, 14, '#7a5a30');
+  }
+  if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash / 40})`; ctx.fillRect(0, 0, W, H); }
+}
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+loop();
+</script>
+</body>
+</html>

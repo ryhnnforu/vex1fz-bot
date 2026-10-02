@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Dino Run — vex1fz</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; background:#f7f7f7; font-family:'Courier New',monospace; overflow:hidden; }
+  body { display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  #wrap { position:relative; width:100%; max-width:560px; }
+  canvas { display:block; width:100%; background:#f7f7f7; border-bottom:2px solid #535353; image-rendering:pixelated; }
+  .hint { text-align:center; color:#777; font-size:12px; margin-top:8px; letter-spacing:1px; }
+  .night canvas { background:#242424; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="560" height="200"></canvas>
+  <div class="hint">⚡ SPASI / TAP untuk LOMPAT — mode Chrome asli</div>
+</div>
+<script>
+/* ═══ DINO RUN — meniru game offline Chrome T-Rex ═══ */
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+const GROUND = H - 26;
+let night = false, frames = 0;
+
+/* ── sprite pixel sederhana ── */
+function px(x, y, w, h, col) { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); }
+
+/* dino (draw di koordinat x,y, skala 2) */
+function drawDino(x, y, frame, dead) {
+  const c = night ? '#f7f7f7' : '#535353';
+  const s = 2;
+  const step = frame % 2;
+  // badan
+  px(x, y, 44*s/2, 0, c);
+  ctx.fillStyle = c;
+  // kepala
+  ctx.fillRect(x+18, y-20, 22, 14);
+  ctx.fillRect(x+34, y-16, 8, 6);       // moncong
+  ctx.fillRect(x+16, y-24, 14, 6);      // kepala atas
+  // mata
+  ctx.fillStyle = dead ? '#c33' : (night?'#242424':'#f7f7f7');
+  ctx.fillRect(x+28, y-18, 3, 3);
+  ctx.fillStyle = c;
+  // leher + badan
+  ctx.fillRect(x+14, y-8, 20, 16);
+  ctx.fillRect(x, y-4, 24, 16);         // badan
+  ctx.fillRect(x-4, y+8, 10, 6);        // ekor
+  // lengan
+  ctx.fillRect(x+16, y+2, 10, 4);
+  // kaki (animasi)
+  if (dead) { ctx.fillRect(x+2, y+12, 8, 10); ctx.fillRect(x+14, y+12, 8, 10); }
+  else if (step) { ctx.fillRect(x+2, y+12, 7, 10); ctx.fillRect(x+16, y+14, 7, 8); }
+  else { ctx.fillRect(x+4, y+14, 7, 8); ctx.fillRect(x+14, y+12, 7, 10); }
+  // lengan depan
+  ctx.fillRect(x+20, y+4, 6, 6);
+}
+function drawCactus(x, h) {
+  const c = night ? '#f7f7f7' : '#535353';
+  ctx.fillStyle = c;
+  const w = 8;
+  ctx.fillRect(x, GROUND - h, w, h);
+  if (h > 26) {
+    ctx.fillRect(x - 7, GROUND - h + 10, 7, 6);
+    ctx.fillRect(x - 7, GROUND - h + 10, 5, 14);
+    ctx.fillRect(x + w, GROUND - h + 16, 7, 6);
+    ctx.fillRect(x + w + 2, GROUND - h + 16, 5, 12);
+  }
+}
+function drawBird(x, y, flap) {
+  const c = night ? '#f7f7f7' : '#535353';
+  ctx.fillStyle = c;
+  ctx.fillRect(x, y, 22, 6);          // badan
+  ctx.fillRect(x + 14, y - 4, 8, 6);  // kepala
+  ctx.fillRect(x + 20, y - 2, 4, 3);  // paruh
+  ctx.fillStyle = night ? '#242424' : '#f7f7f7';
+  ctx.fillRect(x + 17, y - 3, 2, 2);  // mata
+  ctx.fillStyle = c;
+  if (flap) { ctx.fillRect(x + 4, y - 8, 12, 5); } else { ctx.fillRect(x + 4, y + 6, 12, 5); }
+}
+
+/* ── state ── */
+const G = {
+  dino: { x: 40, y: GROUND, vy: 0, onGround: true },
+  speed: 6.2, dist: 0, score: 0, hi: +(localStorage.getItem('dino_hi') || 0),
+  obstacles: [], clouds: [], stars: [], playing: true, started: false, dead: false
+};
+function reset() {
+  G.dino = { x: 40, y: GROUND, vy: 0, onGround: true };
+  G.speed = 6.2; G.dist = 0; G.score = 0;
+  G.obstacles = []; G.dead = false; G.playing = true; night = false;
+  frames = 0;
+}
+function jump() {
+  if (G.dead) { reset(); return; }
+  if (G.dino.onGround) { G.dino.vy = -11.5; G.dino.onGround = false; }
+}
+addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); jump(); } });
+cv.addEventListener('pointerdown', jump);
+
+function spawn() {
+  const r = Math.random();
+  if (r < 0.75) G.obstacles.push({ type: 'cactus', x: W, h: Math.random() < 0.5 ? 34 : 24 });
+  else G.obstacles.push({ type: 'bird', x: W, y: GROUND - 30 - Math.random() * 40, flap: 0 });
+}
+
+let acc = 0;
+function update() {
+  if (G.dead) return;
+  if (G.started) {
+    G.dist += G.speed / 10;
+    G.score = Math.floor(G.dist);
+    G.speed = 6.2 + Math.min(6, G.dist / 400);
+    if (G.score >= 400) night = true;
+  }
+  // dino
+  const d = G.dino;
+  d.vy += 0.62; d.y += d.vy;
+  if (d.y >= GROUND) { d.y = GROUND; d.vy = 0; d.onGround = true; }
+  // rintangan
+  for (const o of G.obstacles) o.x -= G.speed;
+  G.obstacles = G.obstacles.filter(o => o.x > -50);
+  acc++;
+  if (acc > 60 + Math.random() * 60) { acc = 0; if (G.started) spawn(); }
+  // tabrakan
+  const dx = d.x, dy = d.y - 24, dw = 40, dh = 36;
+  for (const o of G.obstacles) {
+    if (o.type === 'cactus') {
+      if (dx + dw - 8 > o.x && dx + 6 < o.x + 8 && dy + dh > GROUND - o.h) return die();
+    } else {
+      if (dx + dw - 8 > o.x && dx + 6 < o.x + 22 && dy < o.y + 10 && dy + dh > o.y) return die();
+    }
+  }
+}
+function die() {
+  G.dead = true;
+  if (G.score > G.hi) { G.hi = G.score; localStorage.setItem('dino_hi', G.hi); }
+}
+
+function drawGround() {
+  ctx.strokeStyle = night ? '#f7f7f7' : '#535353';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, GROUND + 14); ctx.lineTo(W, GROUND + 14); ctx.stroke();
+  ctx.fillStyle = night ? '#777' : '#aaa';
+  for (let i = 0; i < 20; i++) {
+    const x = (i * 40 - (G.dist * 6) % 40);
+    ctx.fillRect(x, GROUND + 18 + (i % 3) * 3, 10 + (i % 4) * 4, 2);
+  }
+}
+function hud() {
+  ctx.fillStyle = night ? '#f7f7f7' : '#535353';
+  ctx.font = 'bold 16px "Courier New",monospace';
+  ctx.textAlign = 'right';
+  const s = String(G.score).padStart(5, '0');
+  const h = String(G.hi).padStart(5, '0');
+  ctx.fillText(`HI ${h}   ${s}`, W - 16, 24);
+  ctx.textAlign = 'left';
+}
+function over() {
+  ctx.fillStyle = 'rgba(247,247,247,.85)';
+  if (night) ctx.fillStyle = 'rgba(36,36,36,.85)';
+  ctx.fillRect(W/2 - 120, H/2 - 44, 240, 74);
+  ctx.strokeStyle = night ? '#f7f7f7' : '#535353'; ctx.lineWidth = 2;
+  ctx.strokeRect(W/2 - 120, H/2 - 44, 240, 74);
+  ctx.fillStyle = night ? '#f7f7f7' : '#535353';
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 18px "Courier New",monospace';
+  ctx.fillText('G A M E  O V E R', W/2, H/2 - 16);
+  ctx.font = '13px "Courier New",monospace';
+  ctx.fillText('Ketuk / SPASI untuk main lagi', W/2, H/2 + 12);
+  ctx.textAlign = 'left';
+}
+function ready() {
+  ctx.fillStyle = night ? '#f7f7f7' : '#535353';
+  ctx.font = 'bold 15px "Courier New",monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('TEKAN SPASI / TAP UNTUK MULAI', W/2, H/2 - 40);
+  ctx.textAlign = 'left';
+}
+
+function loop() {
+  frames++;
+  ctx.clearRect(0, 0, W, H);
+  cv.style.background = night ? '#242424' : '#f7f7f7';
+  if (!G.started) {
+    drawGround(); drawDino(G.dino.x, G.dino.y, Math.floor(frames/8), false); ready(); hud();
+    return requestAnimationFrame(loop);
+  }
+  update();
+  drawGround();
+  for (const o of G.obstacles) {
+    if (o.type === 'cactus') drawCactus(o.x, o.h);
+    else { o.flap = Math.floor(frames/6) % 2; drawBird(o.x, o.y, o.flap); }
+  }
+  drawDino(G.dino.x, G.dino.y, Math.floor(frames/8), G.dead);
+  hud();
+  if (G.dead) over();
+  requestAnimationFrame(loop);
+}
+
+/* mulai saat tekan pertama */
+const startOnce = e => {
+  if (!G.started) { G.started = true; e && e.preventDefault(); }
+};
+addEventListener('keydown', startOnce);
+cv.addEventListener('pointerdown', startOnce);
+loop();
+</script>
+</body>
+</html>

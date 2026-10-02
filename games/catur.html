@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Catur — vex1fz</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { min-height:100%; background:radial-gradient(circle at 50% 0,#5b3a1e,#2e1c0e 70%); font-family:Georgia,'Times New Roman',serif; }
+  body { display:flex; flex-direction:column; align-items:center; padding:14px; color:#f5e6cd; }
+  h1 { font-size:20px; letter-spacing:4px; margin-bottom:6px; text-shadow:0 2px 6px #000; }
+  .sub { font-size:12px; opacity:.75; margin-bottom:10px; }
+  #turn { font-size:15px; background:#1e1208cc; border:1px solid #a97c46; padding:6px 14px; border-radius:20px; margin-bottom:10px; min-width:230px; text-align:center; }
+  #board { display:grid; grid-template-columns:repeat(8,1fr); width:min(94vw,440px); border:10px solid #6b4423; border-radius:6px;
+           box-shadow:0 14px 34px #000a, inset 0 0 0 2px #3d2612; user-select:none; }
+  .cell { position:relative; aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+          font-size:clamp(20px,6.4vw,34px); cursor:pointer; text-shadow:0 2px 3px #00000055; }
+  .light { background:linear-gradient(135deg,#f0d9b5,#e6c79c); color:#111; }
+  .dark  { background:linear-gradient(135deg,#b58863,#96674a); color:#111; }
+  .cell.sel { outline:4px solid #ffd76e; outline-offset:-4px; }
+  .cell.move::after { content:''; position:absolute; width:26%; height:26%; border-radius:50%; background:#2f9e4466; }
+  .cell.cap::after  { content:''; position:absolute; inset:6%; border:4px solid #e03131aa; border-radius:50%; }
+  .cell.last { box-shadow:inset 0 0 18px #ffd76e99; }
+  .rank { color:#f5e6cd88; font-size:11px; position:absolute; top:2px; left:3px; }
+  .file { color:#f5e6cd88; font-size:11px; position:absolute; bottom:2px; right:3px; }
+  #side { display:flex; gap:8px; margin-top:10px; width:min(94vw,440px); justify-content:space-between; }
+  .box { flex:1; background:#1e1208cc; border:1px solid #a97c46; border-radius:8px; padding:6px 8px; font-size:12px; min-height:52px; }
+  .box b { color:#ffd76e; }
+  #tools { display:flex; gap:8px; margin-top:10px; }
+  button { font-family:inherit; background:linear-gradient(#a97c46,#7c552c); color:#fff; border:none; padding:8px 16px;
+           border-radius:8px; font-size:13px; cursor:pointer; box-shadow:0 3px 0 #4a2f14; }
+  button:active { transform:translateY(2px); box-shadow:none; }
+  .msg { margin-top:8px; font-size:13px; color:#ffd76e; min-height:18px; }
+</style>
+</head>
+<body>
+<h1>♞ C A T U R ♜</h1>
+<div class="sub">Papan kayu klasik • 2 pemain (gantian di 1 HP)</div>
+<div id="turn">Giliran: ⬜ Putih</div>
+<div id="board"></div>
+<div id="side">
+  <div class="box"><b>Putih</b><div id="capW">—</div></div>
+  <div class="box"><b>Hitam</b><div id="capB">—</div></div>
+</div>
+<div class="msg" id="msg"></div>
+<div id="tools">
+  <button onclick="undo()">↩ Undo</button>
+  <button onclick="restart()">⟲ Ulang</button>
+</div>
+<script>
+/* ═══ CATUR — 8×8, tema kayu, aturan dasar lengkap ═══ */
+const GLYPH = { K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙', k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟' };
+const boardEl = document.getElementById('board'), turnEl = document.getElementById('turn'), msgEl = document.getElementById('msg');
+let board, turn, sel, hist, capW, capB, lastMove, gameOver;
+
+function init() {
+  board = [
+    ['r','n','b','q','k','b','n','r'],
+    ['p','p','p','p','p','p','p','p'],
+    [null,null,null,null,null,null,null,null],
+    [null,null,null,null,null,null,null,null],
+    [null,null,null,null,null,null,null,null],
+    [null,null,null,null,null,null,null,null],
+    ['P','P','P','P','P','P','P','P'],
+    ['R','N','B','Q','K','B','N','R']
+  ];
+  turn = 'w'; sel = null; hist = []; capW = []; capB = []; lastMove = null; gameOver = false;
+  msgEl.textContent = ''; render();
+}
+const isW = p => p && p === p.toUpperCase();
+const isB = p => p && p === p.toLowerCase();
+const side = p => isW(p) ? 'w' : isB(p) ? 'b' : null;
+
+function inb(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
+
+function movesFrom(r, c) {
+  const p = board[r][c]; if (!p) return [];
+  const s = side(p), out = [];
+  const push = (rr, cc) => {
+    if (!inb(rr, cc)) return false;
+    const t = board[rr][cc];
+    if (!t) { out.push([rr, cc]); return true; }
+    if (side(t) !== s) out.push([rr, cc]);
+    return false;
+  };
+  const type = p.toLowerCase();
+  if (type === 'p') {
+    const dir = s === 'w' ? -1 : 1;
+    const start = s === 'w' ? 6 : 1;
+    if (inb(r + dir, c) && !board[r + dir][c]) {
+      out.push([r + dir, c]);
+      if (r === start && !board[r + 2 * dir][c]) out.push([r + 2 * dir, c]);
+    }
+    for (const dc of [-1, 1]) {
+      const rr = r + dir, cc = c + dc;
+      if (inb(rr, cc) && board[rr][cc] && side(board[rr][cc]) !== s) out.push([rr, cc]);
+    }
+  } else if (type === 'n') {
+    for (const [dr, dc] of [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]) push(r + dr, c + dc);
+  } else if (type === 'k') {
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) if (dr || dc) push(r + dr, c + dc);
+  } else {
+    const dirs = [];
+    if (type === 'b' || type === 'q') dirs.push([-1,-1],[-1,1],[1,-1],[1,1]);
+    if (type === 'r' || type === 'q') dirs.push([-1,0],[1,0],[0,-1],[0,1]);
+    for (const [dr, dc] of dirs) {
+      let rr = r + dr, cc = c + dc;
+      while (inb(rr, cc)) { if (!push(rr, cc)) break; rr += dr; cc += dc; }
+    }
+  }
+  return out;
+}
+
+function trySelect(r, c) {
+  if (gameOver) return;
+  const p = board[r][c];
+  if (sel) {
+    const ok = movesFrom(sel[0], sel[1]).some(([rr, cc]) => rr === r && cc === c);
+    if (ok) return doMove(sel[0], sel[1], r, c);
+    if (p && side(p) === turn) { sel = [r, c]; return render(); }
+    sel = null; return render();
+  }
+  if (p && side(p) === turn) { sel = [r, c]; render(); }
+}
+
+function doMove(r, c, rr, cc) {
+  const p = board[r][c], t = board[rr][cc];
+  hist.push({ board: JSON.parse(JSON.stringify(board)), turn, capW: [...capW], capB: [...capB], lastMove });
+  if (t) (side(t) === 'w' ? capB : capW).push(GLYPH[t]);
+  // promosi pion → ratu
+  let moved = p;
+  if (p.toLowerCase() === 'p' && (rr === 0 || rr === 7)) moved = side(p) === 'w' ? 'Q' : 'q';
+  board[rr][cc] = moved; board[r][c] = null;
+  lastMove = [r, c, rr, cc];
+  sel = null;
+  if (t && t.toLowerCase() === 'k') {
+    gameOver = true;
+    render();
+    msgEl.textContent = (side(t) === 'w' ? '♟ HITAM' : '⬜ PUTIH') + ' MENANG — Raja terkapur! 🏆';
+    return;
+  }
+  turn = turn === 'w' ? 'b' : 'w';
+  render();
+}
+
+function render() {
+  boardEl.innerHTML = '';
+  const mvs = sel ? movesFrom(sel[0], sel[1]) : [];
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    const d = document.createElement('div');
+    d.className = 'cell ' + ((r + c) % 2 ? 'dark' : 'light');
+    if (sel && sel[0] === r && sel[1] === c) d.classList.add('sel');
+    if (mvs.some(([rr, cc]) => rr === r && cc === c)) d.classList.add(board[r][c] ? 'cap' : 'move');
+    if (lastMove && ((lastMove[0] === r && lastMove[1] === c) || (lastMove[2] === r && lastMove[3] === c))) d.classList.add('last');
+    d.textContent = board[r][c] ? GLYPH[board[r][c]] : '';
+    if (r === 7) d.insertAdjacentHTML('beforeend', `<span class="file">${'abcdefgh'[c]}</span>`);
+    if (c === 0) d.insertAdjacentHTML('beforeend', `<span class="rank">${8 - r}</span>`);
+    d.onclick = () => trySelect(r, c);
+    boardEl.appendChild(d);
+  }
+  turnEl.innerHTML = gameOver ? '🏆 Partai selesai' : (turn === 'w' ? 'Giliran: ⬜ Putih' : 'Giliran: ⬛ Hitam');
+  document.getElementById('capW').textContent = capW.join(' ') || '—';
+  document.getElementById('capB').textContent = capB.join(' ') || '—';
+}
+function undo() {
+  if (!hist.length) { msgEl.textContent = 'Tidak ada langkah untuk di-undo.'; return; }
+  const h = hist.pop();
+  board = h.board; turn = h.turn; capW = h.capW; capB = h.capB; lastMove = h.lastMove;
+  sel = null; gameOver = false; msgEl.textContent = ''; render();
+}
+function restart() { init(); }
+init();
+</script>
+</body>
+</html>

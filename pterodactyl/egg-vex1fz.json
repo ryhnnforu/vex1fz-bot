@@ -1,0 +1,19 @@
+{
+  "_comment": "Egg sederhana vex1fz-bot untuk panel Pterodactyl. Import lewat Admin - Eggs - Import, atau pakai NodeJS 20 egg bawaan panel dengan startup: if [ ! -d node_modules ]; then npm install --omit=dev; fi && node index.js",
+  "meta": {
+    "version": "1.0.0",
+    "update_url": null
+  },
+  "exported_at": "2026-09-25T00:00:00+07:00",
+  "name": "vex1fz-bot",
+  "author": "vex1fz",
+  "description": "Bot WhatsApp Baileys + ButtonList + Minigame HTML",
+  "features": null,
+  "docker_image": "ghcr.io/parkervcp/yolks:nodejs_20",
+  "file_denylist": [],
+  "startup": "if [ ! -d node_modules ]; then npm install --omit=dev; fi && node index.js",
+  "config": {
+    "files": "{\n  \"settings.json\": {\n    \"fields\": [\n      {\n        \"name\": \"BOT_NUMBER\",\n        \"description\": \"Nomor bot (format 628xxx)\",\n        \"env_variable\": \"BOT_NUMBER\",\n        \"default_value\": \"\",\n        \"user_viewable\": true,\n        \"user_editable\": true,\n        \"field_type\": \"text\"\n      },\n      {\n        \"name\": \"LOGIN_MODE\",\n        \"description\": \"pairing atau qr\",\n        \"env_variable\": \"LOGIN_MODE\",\n        \"default_value\": \"pairing\",\n        \"user_viewable\": true,\n        \"user_editable\": true,\n        \"field_type\": \"text\"\n      },\n      {\n        \"name\": \"PUBLIC_URL\",\n        \"description\": \"URL publik panel (https://domain:port) untuk link minigame\",\n        \"env_variable\": \"PUBLIC_URL\",\n        \"default_value\": \"\",\n        \"user_viewable\": true,\n        \"user_editable\": true,\n        \"field_type\": \"text\"\n      },\n      {\n        \"name\": \"BOT_MODE\",\n        \"description\": \"public atau self\",\n        \"env_variable\": \"BOT_MODE\",\n        \"default_value\": \"public\",\n        \"user_viewable\": true,\n        \"user_editable\": true,\n        \"field_type\": \"text\"\n      }\n    ]\n  }\n}",
+    "startup": "{\n  \"done\": [\n    {\"line\": \"PAIRING\", \"for\": 1000},\n    {\"line\": \"terminated\", \"for\": 3}\n  ]\n}"
+  }
+}
