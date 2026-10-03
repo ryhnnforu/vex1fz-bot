@@ -1,12 +1,12 @@
 # 🤖 VEX1FZ BOT
 
-Bot WhatsApp **Baileys** (via `ourin-baileys@9.0.21`) dengan **tombol "Pilih"**, multi-prefix, minigame HTML
+Bot WhatsApp **Baileys** (via `@japofc/baileys@2.4.7-new`) dengan **tombol "Pilih"**, multi-prefix, minigame HTML
 (**InteractiveResponseMessage + HTML**), sistem RPG, fitur downloader & islami — **201 fitur, semua submenu
 punya 20 fitur berbeda + deskripsinya**.
 
 | | |
 |---|---|
-| 🧩 Library | `ourin-baileys` **9.0.21** (dynamic import) |
+| 🧩 Library | `@japofc/baileys` **2.4.7-new** (pin ketat — audit IOC lolos) |
 | 🔤 Prefix user | `.` — untuk **semua user** |
 | 👑 Prefix owner | `/` `,` `=>` — **hanya owner** |
 | 👤 Owner | `6283199329104` (LID `168036921303189@lid`) |
@@ -316,7 +316,7 @@ vex1fz-bot/
 | Pairing code tidak muncul | Pastikan `LOGIN_MODE=pairing`, cek koneksi internet, tunggu 5 detik |
 | `session logout` | Hapus folder `auth/` → login ulang |
 | Link game tidak kebuka (panel) | Isi `PUBLIC_URL` = `https://domain:port` panel |
-| Tombol list tidak muncul | Update WhatsApp kamu; pastikan `ourin-baileys@9.0.21` (`npm ls ourin-baileys`) |
+| Tombol list tidak muncul | Update WhatsApp kamu; pastikan `@japofc/baileys@2.4.7-new` (`npm ls @japofc/baileys`) |
 | `npm install` error di Termux (better-sqlite3/sharp/canvas) | Jalankan `pkg install python make clang -y` lalu ulangi; jika tetap gagal: `npm install --ignore-scripts` (module native dilewati — tidak dipakai bot ini) |
 | IG/FB gagal | Lihat bagian **Downloader** di atas |
 | Port bentrok | Ganti `PORT` di `.env` |
@@ -347,7 +347,7 @@ vex1fz-bot@1.0.0
 +-- node-cache@5.1.2
 +-- node-os-utils@3.1.0
 +-- node-webpmux@3.2.1
-+-- ourin-baileys@9.0.21
++-- @japofc/baileys@2.4.7-new
 +-- pdfkit@0.19.1
 +-- performance-now@2.1.0
 +-- pino@10.3.1
@@ -415,4 +415,4 @@ git push -u origin main
 - Bot **tidak** memproses pesan dari nomornya sendiri.
 - Gunakan bot dengan bijak — penyalahgunaan (spam/broadcast ke orang asing) bukan tanggung jawab developer.
 
-**vex1fz bot** — ourin-baileys 9.0.21 • 201 fitur • Node.js ≥ 18 • MIT
+**vex1fz bot** — @japofc/baileys 2.4.7-new • 201 fitur • Node.js ≥ 18 • MIT

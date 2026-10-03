@@ -471,7 +471,7 @@ async function startBot() {
   console.log('\x1b[0m')
 
   db.load()
-  await initWA() // ESM ourin-baileys wajib di-load sebelum startBot
+  await initWA() // ESM @japofc/baileys wajib di-load sebelum startBot
   startServer()
   log.info(`prefix user: "${config.userPrefix}" | prefix owner: ${config.ownerPrefixes.join(' ')}`)
   log.info(`owner: ${config.ownerNumber} | lid: ${config.ownerLid}`)
