@@ -1,5 +1,5 @@
 /**
- * commands/group.js — MENUGROUP (20 fitur)
+ * commands/group.js — MENUGROUP (20 fitur; +30 lagi di group2.js = 50)
  *   Admin grup: .h .swgc .kick .add .promote .demote
  *               .welcome .setwelcome .goodbye .setgoodbye
  *               .bungkam .unbungkam .cekbungkam .tagall
@@ -125,8 +125,17 @@ const commands = [
       const target = targetOf(m)
       if (!target) return m.reply('Tag/reply member yang mau dikeluarkan: *.kick @user*')
       if (target === m.sender || target.split('@')[0] === m.sender.split('@')[0]) return m.reply('Ga bisa keluarin diri sendiri 😅')
-      await sock.groupParticipantsUpdate(m.chat, [target], 'remove')
-      m.reply(`✅ @${target.split('@')[0]} sudah dikeluarkan dari grup.`, mentionsOf(target))
+      try {
+        await sock.groupParticipantsUpdate(m.chat, [target], 'remove')
+        m.reply(`✅ @${target.split('@')[0]} sudah dikeluarkan dari grup.`, mentionsOf(target))
+      } catch (e) {
+        const msg = String(e?.message || e)
+        if (/403|not-allowed|forbidden|admin/i.test(msg)) {
+          m.reply('⚠️ Gagal — bot bukan admin, atau target adalah *admin/pemilik grup* yang dilindungi.')
+        } else {
+          m.reply('⚠️ Gagal kick: ' + msg.slice(0, 200))
+        }
+      }
     }
   },
 

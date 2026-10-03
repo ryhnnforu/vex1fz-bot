@@ -51,7 +51,7 @@ async function playGame(m, sock, key) {
   const g = GAMES[key]
   if (!g) return m.reply('Game tidak ditemukan. Ketik *.minigame* untuk daftarnya.')
   await m.react('🎮')
-  await sendGameCard(sock, m.chat, g)
+  await sendGameCard(sock, m.chat, g, m)
 }
 
 const commands = [
@@ -115,7 +115,6 @@ const commands = [
   /* ═══ MENU ═══ */
   {
     name: 'menu',
-    aliases: ['listmenu'],
     category: 'menu',
     access: 'user',
     prefixes: ['.'],
@@ -135,14 +134,58 @@ const commands = [
         await m.reply(text)
       }
       await sleep(400)
-      await sendList(sock, m.chat, {
+      // 2 langkah ala referensi: [List Menu] → sheet kategori ; [Info Dev]
+      await sendButtons(sock, m.chat, {
         title: `${config.botName.toUpperCase()} MENU`,
-        description: 'Semua fitur bot — pilih kategori lalu tekan *Pilih*',
-        buttonText: 'Pilih',
-        footer: `${config.botName} ${config.version} • ${config.userPrefix}help untuk panduan`,
-        sections: menu.mainMenuSections()
+        text: 'Buka daftar fitur lewat tombol di bawah 👇',
+        footer: `${config.botName} ${config.version} • vex1fz bye ryhn`,
+        buttons: [
+          { displayText: '🗕 List Menu', id: '.listmenu' },
+          { displayText: '🏷 Info Dev', id: '.infodev' }
+        ]
       }, m)
     }
+  },
+  {
+    name: 'listmenu',
+    category: 'menu',
+    access: 'user',
+    prefixes: ['.'],
+    hidden: true,
+    desc: 'Sheet daftar menu (dibuka dari tombol List Menu)',
+    usage: '.listmenu',
+    async run(m, sock) {
+      await sleep(300)
+      await sendList(sock, m.chat, {
+        title: 'List Menu',
+        description: 'Pilih kategori fitur yang mau dibuka 👇',
+        buttonText: 'Pilih',
+        footer: `${config.botName} ${config.version} • vex1fz bye ryhn`,
+        sections: menu.listMenuSections()
+      }, m)
+    }
+  },
+  {
+    name: 'infodev',
+    category: 'menu',
+    access: 'user',
+    prefixes: ['.'],
+    hidden: true,
+    desc: 'Info developer / kredit bot',
+    usage: '.infodev',
+    run: (m) => m.reply([
+      '🛠️ *INFO DEV*',
+      '┌┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈',
+      `│ *Developer* : ryhnnforu`,
+      `│ *GitHub*    : github.com/ryhnnforu`,
+      `│ *Bot*       : ${config.botName} ${config.version}`,
+      `│ *Owner*     : ${config.ownerNumber}`,
+      `│ *Library*   : @japofc/baileys`,
+      `│ *Sewa bot*  : chat owner langsung`,
+      '└┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈',
+      '',
+      'Dibuat dengan ❤️ — *vex1fz bye ryhn*'
+    ].join('\n'))
   },
   {
     name: 'menudownloader',

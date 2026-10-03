@@ -3,6 +3,7 @@
  */
 const db = require('../lib/db')
 const config = require('../config')
+const { wa } = require('../lib/wa')
 const { box, boxLines } = require('../lib/menu')
 const { fmt, jakartaDate } = require('../lib/util')
 
@@ -41,9 +42,47 @@ const commands = [
     prefixes: ['.'],
     desc: 'Kartu profil kamu',
     usage: '.profile',
-    async run(m) {
+    async run(m, sock) {
       const u = db.getUser(m.sender)
       const r = db.getRpg(m.chat)
+
+      // ── kartu profil AIRich (PRIMARY) ──
+      try {
+        const { AIRich } = wa()
+        if (typeof AIRich === 'function') {
+          const rich = new AIRich(sock)
+          const uname = (u.name || m.pushName || m.sender.split('@')[0]).replace(/\s+/g, '_')
+          rich.addProfileCard({
+            username: `@${uname}`,
+            full_name: u.name || m.pushName || '-',
+            title: `${m.isOwner ? '\u{1F451} OWNER' : '\u{1F464} USER'} \u2022 ${config.botName}`,
+            subtitle: `Limit ${u.limit}/${config.dailyLimit} \u2022 ${u.registered ? 'SUDAH DAFTAR' : 'BELUM DAFTAR'}`,
+            is_verified: !!m.isOwner
+          })
+          rich.addKeyValue([
+            ['nomor', m.chat.split('@')[0]],
+            ['akses', m.isOwner ? 'OWNER' : 'USER'],
+            ['limit', m.isOwner ? 'UNLIMITED' : `${u.limit}/${config.dailyLimit}`],
+            ['gabung', u.joinedAt ? new Date(u.joinedAt).toLocaleDateString('id-ID') : '-']
+          ], { header: ['INFO USER', ''] })
+          if (r) {
+            rich.addHeading('RPG')
+            rich.addKeyValue([
+              ['karakter', r.name],
+              ['level', String(r.level)],
+              ['hp', `${r.hp}/${r.maxHp}`],
+              ['gold', String(r.gold)]
+            ])
+          }
+          rich.addText('\u00A9 vex1fz bye ryhn')
+          await rich.send(m.chat, { quoted: m.raw })
+          return
+        }
+      } catch (e) {
+        // diam-diam fallback ke teks lama
+        try { require('../lib/util').log.warn('AIRich profile gagal \u2192 teks:', e.message) } catch (_) {}
+      }
+
       m.reply(
         [
           `${box('INFO USER', [

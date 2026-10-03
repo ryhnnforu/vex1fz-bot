@@ -18,6 +18,13 @@ const db = require('./lib/db')
 const ai = require('./lib/ai')
 const { serialize } = require('./lib/serialize')
 const registry = require('./commands/index')
+// muat plugin tambahan dari folder plugins/ (tool dev .>_)
+try {
+  const pl = registry.loadPlugins()
+  if (pl.loaded.length || pl.errors.length) {
+    log.info(`plugin: ${pl.loaded.length} loaded` + (pl.errors.length ? `, ${pl.errors.length} error: ${pl.errors.join('; ')}` : ''))
+  }
+} catch (e) { log.warn('loadPlugins gagal:', e.message) }
 const { log, sleep, truncate } = require('./lib/util')
 const { isGroupAdmin } = require('./lib/groupmeta')
 const { closestFeature } = require('./lib/typo')
@@ -28,6 +35,31 @@ const ownerJids = [
   `${config.ownerNumber}@s.whatsapp.net`,
   config.ownerLid
 ]
+
+/* ── trigger chat santai (permintaan owner) ── */
+const triggerCd = new Map()
+const spamWin = new Map()   // antispam: window pesan per user
+const slowTs = new Map()    // slowmode: ts pesan terakhir per user+chat
+const slowNotice = new Map() // jid → ts terakhir
+const KONTOL_REPLIES = ['lu jangan toxic anjenk', 'lu diam aja zionis']
+function chatTrigger(m) {
+  const t = (m.text || '').trim()
+  if (!t) return false
+  const now = Date.now()
+  const last = triggerCd.get(m.sender) || 0
+  if (now - last < 8000) return false
+  if (t.toLowerCase() === 'p') {
+    triggerCd.set(m.sender, now)
+    m.reply('pa pe pa pe, yahudi lu?')
+    return true
+  }
+  if (/kontol/i.test(t)) {
+    triggerCd.set(m.sender, now)
+    m.reply(KONTOL_REPLIES[Math.floor(Math.random() * KONTOL_REPLIES.length)])
+    return true
+  }
+  return false
+}
 
 /* ═══════════ banner pairing code ═══════════ */
 function printBanner(title, lines) {
@@ -426,6 +458,68 @@ async function startBot() {
             }
           }
         }
+
+        // ── ANTITOXIC / ANTISPAM / SLOWMODE (grup) ──
+        if (m.isGroup && !m.isOwner) {
+          const gcfg = (db.load().settings.groupcfg || {})[m.chat]
+          if (gcfg) {
+            const txt = m.text || ''
+
+            // kata kasar → hapus + warn hitungan
+            if (gcfg.antitoxic && txt && /(anjing|babi|bangsat|goblok|goblog|tolol|memek|kampret|monyet|idiot|fuck|bitch|kontol)/i.test(txt)) {
+              const adminMe = await isGroupAdmin(sock, m)
+              if (!adminMe) {
+                try {
+                  await sock.sendMessage(m.chat, { delete: m.key })
+                  gcfg.toxicCount = gcfg.toxicCount || {}
+                  gcfg.toxicCount[m.sender] = (gcfg.toxicCount[m.sender] || 0) + 1
+                  db.save()
+                  await sock.sendMessage(m.chat, {
+                    text: `🧹 @${m.sender.split('@')[0].split(':')[0]} kata kasar tidak diterima di sini (cekbacot: *.cekbacot*)`,
+                    mentions: [m.sender]
+                  })
+                } catch (e) { log.warn('antitoxic gagal hapus:', e.message) }
+                continue
+              }
+            }
+
+            // antispam: ≥5 pesan dalam 5 detik → hapus
+            if (gcfg.antispam) {
+              const now = Date.now()
+              const wins = (spamWin.get(m.sender) || []).filter(t => now - t < 5000)
+              wins.push(now)
+              spamWin.set(m.sender, wins)
+              if (wins.length >= 5) {
+                try {
+                  await sock.sendMessage(m.chat, { delete: m.key })
+                } catch (_) {}
+                if (!slowNotice.has('spam:' + m.sender) || now - slowNotice.get('spam:' + m.sender) > 10000) {
+                  slowNotice.set('spam:' + m.sender, now)
+                  await sock.sendMessage(m.chat, { text: `🚫 @${m.sender.split('@')[0].split(':')[0]} terlalu cepat (antispam)!`, mentions: [m.sender] })
+                }
+                continue
+              }
+            }
+
+            // slowmode: pesan > X detik setelah pesan sebelumnya → hapus
+            if (gcfg.slow > 0) {
+              const now = Date.now()
+              const last = slowTs.get(m.chat + ':' + m.sender) || 0
+              if (last && now - last < gcfg.slow * 1000) {
+                try { await sock.sendMessage(m.chat, { delete: m.key }) } catch (_) {}
+                if (!slowNotice.has('slow:' + m.sender) || now - slowNotice.get('slow:' + m.sender) > 8000) {
+                  slowNotice.set('slow:' + m.sender, now)
+                  await sock.sendMessage(m.chat, { text: `⏳ Slowmode *${gcfg.slow} detik* — tunggu dulu ya.` })
+                }
+                continue
+              }
+              slowTs.set(m.chat + ':' + m.sender, now)
+            }
+          }
+        }
+
+        // ── TRIGGER CHAT (p / kontol) — sebelum AI supaya tidak dimakan AI ──
+        if (!m.prefix && chatTrigger(m)) continue
 
         // ── AI chatbot: balasan ke pesan bot / auto mode (tanpa prefix) ──
         if (!m.prefix || !m.command) {

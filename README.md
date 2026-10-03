@@ -1,8 +1,8 @@
 # 🤖 VEX1FZ BOT
 
 Bot WhatsApp **Baileys** (via `@japofc/baileys@2.4.7-new`) dengan **tombol "Pilih"**, multi-prefix, minigame HTML
-(**InteractiveResponseMessage + HTML**), sistem RPG, fitur downloader & islami — **201 fitur, semua submenu
-punya 20 fitur berbeda + deskripsinya**.
+(**InteractiveResponseMessage + HTML**), sistem RPG, fitur downloader & islami — **264 fitur terdaftar**:
+group 50, game 35, rpg 35, sisanya 20 per kategori + menu dua langkah ala video referensi.
 
 | | |
 |---|---|
@@ -15,28 +15,30 @@ punya 20 fitur berbeda + deskripsinya**.
 
 ---
 
-## ✅ FITUR LENGKAP — 201 FITUR (semua submenu isi 20)
+## ✅ FITUR LENGKAP — 264 FITUR
 
 | Kategori | Jumlah | Contoh fitur baru |
 |---|---|---|
-| **Sticker** | 20 | `.sticker` `.brat` `.smeme` `.qc` `.stalk` + **watermark `nama user • vex1fz bye ryhn`** |
+| **Sticker** | 20 | `.sticker` `.brat` `.bratanimasi` (24 frame smooth) `.smeme` `.qc` — **tanpa watermark (wm khusus UI)** |
 | **AI** | 20 | `.ai` `.genimage` `.aiset` `.setstc` `.aireset` — emosi dinamis, lihat gambar, kirim stiker |
-| **Group** | 20 | `.h` `.swgc` `.kick` `.add` `.bungkam` welcome/goodbye canvas `.setwelcome` `.setgoodbye` |
-| **General** | 20 | `.ping` `.menu` `.menugame` `.donasi` `.minigame` + game HTML |
+| **Group** | **50** | `.kick` (fix admin/LID) `.warn` `.votekick` `.absen` `.antitoxic` `.antispam` `.slowmode` `.closetime` `.setppgc` `.tagadmin` `.cekbacot` + welcome/goodbye preview |
+| **General** | 20 | `.ping` `.menu` (2 langkah: **List Menu + Info Dev**) `.menugame` `.donasi` `.minigame` |
 | **Downloader** | 20 | `.ytmp3` `.ytmp4` `.play` `.tiktok` `.spotify` `.gitclone` `.reddit` |
-| **Owner** | 21 | `,setstc` `,bc` `,ban` `,aiset` `,backup` `,idmsg` |
-| **Game** | 20 | `.suit` `.ttt` `.blackjack` `.gacha` `.tebakbendera` `.kuisidn` `.ngetik` |
-| **RPG** | 20 | `.rpgdaftar` `.adventure` `.boss` `.kerja` `.mine` `.fish` `.bank` `.arena` `.quest` |
+| **Owner** | 22 | `,setstc` `,bc` `,ban` `,backup` + **tool dev `._`** (eval/add/load/reload plugin/registry/db) |
+| **Game** | **35** | `.suit` `.ttt` `.blackjack` + `.family100` `.wordle` `.memory` `.guessnum` `.tebakkata` `.caklontong` `.tebaknegara` (15 quiz baru) |
+| **RPG** | **35** | `.rpgdaftar` `.adventure` `.boss` + `.craft` `.forge` `.duel` `.pets` `.raid` `.tower` `.worldboss` `.spin` `.sell` (15 baru) |
 | **Islami** | 20 | `.quran` `.kisahnabi` `.hadis` `.dzikir` `.tasbih` `.zakat` `.jadwalbulan` `.hijriah` |
 | **Profile** | 20 | `.daftar` `.profile` `.kartu` `.setttl` `.umur` `.ultah` `.ship` `.afk` `.medali` |
 
 ### Ringkasan perintah populer (prefix `.`)
 | Perintah | Fungsi |
 |---|---|
-| `.ping` `.menu` `.help` | Menu utama — kotak INFO + **list "Pilih"** |
+| `.menu` → **[🗕 List Menu] [🏷 Info Dev]** | Menu dua langkah ala referensi: teks dulu, lalu 2 tombol; List Menu membuka sheet `List Menu` / section `Pilih Kategori` (tombol **Pilih**) |
+| `.ping` `.help` | Info & panduan |
+| `._` / `.>_` (owner) | Tool developer: `.>_ add <nama>` bikin plugin, `.>_ reload`, `.>_ eval`, `.>_ status` — plugin dari folder `plugins/` |
 | `.menusticker` `.menuowner` `.menugroup` `.menugame` `.menurpg` `.menuislami` `.menuprofile` `.menudownloader` | Semua submenu dengan **tombol "Pilih"** + 20 baris deskripsi |
 | `.minigame` `.dino` `.flappybird` `.catur` `.geometridash` | Game HTML via InteractiveResponseMessage |
-| `.sticker` `.brat` `.smeme` `.qc` | Stiker & teks (ada watermark) |
+| `.sticker` `.brat` `.smeme` `.qc` | Stiker & teks — **wm dihapus dari semua output stiker** (permintaan owner); smeme latar cerah, bratanimasi 24 frame lebih halus |
 | `.ai` (reply pesan AI juga bisa) | Chatbot karakter — balas pesan bot = AI aktif |
 | `.rpgdaftar` → `.adventure` `.shop` `.kerja` `.arena` `.quest` | RPG lengkap per chat |
 | `.quran` `.shalat` `.kisahnabi` `.hadis` `.tasbih` | Islami |
@@ -61,9 +63,35 @@ punya 20 fitur berbeda + deskripsinya**.
 
 ---
 
-## 🎬 STRUKTUR MENU (sama seperti video contoh)
+## 🎬 STRUKTUR MENU (2 langkah, sama seperti video contoh)
 
-`.menu` mengirim **pesan ber-kotak** lalu **list "Pilih"**:
+**Langkah 1** — `.menu` mengirim teks (banner + info) lalu **2 tombol**:
+
+```
+🗕 List Menu     → membuka sheet kategori
+🏷 Info Dev      → kredit developer
+```
+
+**Langkah 2** — tombol *List Menu* membuka sheet:
+
+```
+List Menu
+├─ Pilih Kategori
+│  ├─ menu ai          LIHAT MENU AI
+│  ├─ menu sticker     LIHAT MENU STICKER
+│  ├─ menu group       LIHAT MENU GROUP
+│  ├─ menu game        LIHAT MENU GAME
+│  ├─ menu rpg         LIHAT MENU RPG
+│  ├─ menu islami      LIHAT MENU ISLAMI
+│  ├─ menu profile     LIHAT MENU PROFILE
+│  ├─ menu downloader  LIHAT MENU DOWNLOADER
+│  ├─ menu info        INFO & BANTUAN
+│  └─ menu owner       LIHAT MENU OWNER
+└─────────────────────
+        [ Pilih ]
+```
+
+Info bot lama (kotak INFO) ada di teks `.menu`:
 
 ```
 ┌┈┈┈┈┈┈┈○ 「 INFO BOT 」
@@ -88,6 +116,17 @@ Kemudian muncul sheet **Pilih** berisi kategori rapi:
 
 Setiap submenu (`.menudownloader`, `.menurpg`, dst.) juga memakai **list button**
 dengan baris per fitur + deskripsi yang tersusun rapi.
+
+### 🗨️ Trigger chat santai (tanpa prefix)
+| User mengetik | Bot membalas |
+|---|---|
+| `p` (persis) | `pa pe pa pe, yahudi lu?` |
+| kata `kontol` | `lu jangan toxic anjenk` / `lu diam aja zionis` (acak, cooldown 8 dtk) |
+
+### 🃏 Kartu game & profil — AIRichResponseMessage
+Minigame dan `.profile` sekarang dikirim via **AIRich** (`richResponseMessage`
++ view model GenAI: heading, teks, tombol **▶ MAIN SEKARANG**, kartu profil).
+Kalau AIRich gagal, fallback otomatis ke jalur html/native/teks lama.
 
 ---
 

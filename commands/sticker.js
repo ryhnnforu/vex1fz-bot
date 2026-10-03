@@ -4,7 +4,7 @@
  *   .bratkuning .bratpink .bratbiru .bratgradasi .bratimg
  *   .s .sv .smeme .iqc .toimg .togif .take .kutipan .qc
  *
- * SEMUA output stiker: watermark "nama user • vex1fz bye ryhn"
+ * WATERMARK tidak ditempel di output stiker (permintaan owner) — wm khusus UI menu.
  */
 const ai = require('../lib/ai')
 const img = require('../lib/img')
@@ -113,9 +113,9 @@ const commands = [
     category: 'sticker',
     access: 'user',
     prefixes: ['.'],
-    desc: 'Brat animasi smooth (zoom + fade pelan)',
+    desc: 'Brat animasi smooth — 24 frame, zoom+goyang+rotasi halus',
     usage: '.bratanimasi santai aja',
-    run: (m, sock) => sendBratAnim(m, sock, { bg: '#ffffff', fg: '#111111', mode: 'smooth', fps: 10, frames: 14 })
+    run: (m, sock) => sendBratAnim(m, sock, { bg: '#ffffff', fg: '#111111', mode: 'smooth', fps: 14, frames: 24 })
   },
 
   /* 4–10. VARIAN BRAT */
@@ -253,7 +253,7 @@ const commands = [
         const time = `${String(now.getHours()).padStart(2, '0')}.${String(now.getMinutes()).padStart(2, '0')}`
         const r = await generateIQC(text, time)
         if (!r || !r.success || !r.image) throw new Error('generator gagal')
-        const stamped = await img.stampWm(Buffer.from(r.image), wmName(m), { size: 20 })
+        const stamped = Buffer.from(r.image)
         await sock.sendMessage(m.chat, { image: stamped, caption: `IQC by vex1fz • ${wmName(m)}` }, { quoted: m.raw })
         await m.react('✅')
       } catch (e) {
@@ -351,7 +351,7 @@ const commands = [
         if (meta.pages && meta.pages > 1) {
           out = await img.videoToStickerWebp(buf, wmName(m), 'webp')
         } else {
-          const stamped = await img.stampWm(buf, wmName(m), { size: 20 })
+          const stamped = buf
           out = await toWebp(stamped)
         }
         await sock.sendMessage(m.chat, { sticker: out }, { quoted: m.raw })
