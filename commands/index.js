@@ -42,8 +42,9 @@ for (const cmd of all) {
 }
 
 const devtools = require('./devtool')
-all.push(...devtools)
-for (const cmd of devtools) {
+const thbCmds = require('./thb')
+all.push(...devtools, ...thbCmds)
+for (const cmd of [...devtools, ...thbCmds]) {
   byName.set(cmd.name.toLowerCase(), cmd)
   for (const a of cmd.aliases || []) byName.set(a.toLowerCase(), cmd)
 }

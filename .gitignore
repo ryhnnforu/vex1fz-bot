@@ -3,3 +3,8 @@ auth/
 .env
 database/db.json
 *.log
+db.json
+sessions/
+vendor/theryhann/database-rt/
+vendor/theryhann/tmp/
+commands/mimo.txt

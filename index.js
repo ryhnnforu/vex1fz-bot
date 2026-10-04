@@ -18,6 +18,7 @@ const db = require('./lib/db')
 const ai = require('./lib/ai')
 const { serialize } = require('./lib/serialize')
 const registry = require('./commands/index')
+const thb = require('./lib/thbbridge')
 // muat plugin tambahan dari folder plugins/ (tool dev .>_)
 try {
   const pl = registry.loadPlugins()
@@ -275,6 +276,7 @@ async function startBot() {
 
   /* ── welcome / goodbye otomatis ── */
   sock.ev.on('group-participants.update', async ({ id, participants, action }) => {
+    thb.onGroupUpdate({ id, participants, action }).catch(() => {})
     try {
       const botJid = (sock.user?.id || '').split(':')[0].split('@')[0]
       for (const p of participants) {
@@ -319,6 +321,16 @@ async function startBot() {
     }
   }
 
+  sock.ev.on('messages.delete', (info) => {
+    for (const msg of (info && info.messages) || []) {
+      if (!msg || !msg.key || msg.key.fromMe) continue
+      thb.onDelete({
+        remoteJid: msg.key.remoteJid,
+        participant: msg.key.participant || msg.key.remoteJid
+      }).catch(() => {})
+    }
+  })
+
   sock.ev.on('creds.update', saveCreds)
 
   sock.ev.on('connection.update', async (u) => {
@@ -341,6 +353,7 @@ async function startBot() {
 
     if (connection === 'open') {
       log.ok(`terhubung! bot: ${sock.user?.id} (${sock.user?.name || '-'})`)
+      thb.init(sock).catch(e => log.err('THB init:', e))
       printBanner('BOT ONLINE ✅', [
         `Nama    : ${config.botName} ${config.version}`,
         `Owner   : ${config.ownerNumber}`,
@@ -521,6 +534,12 @@ async function startBot() {
         // ── TRIGGER CHAT (p / kontol) — sebelum AI supaya tidak dimakan AI ──
         if (!m.prefix && chatTrigger(m)) continue
 
+        // ── teks polos: serahkan ke engine THB lebih dulu (session game dll).
+        //    Pump berhitung: kalau THB membalas → selesai; kalau tidak → AI vex1fz.
+        if (!m.prefix && thb.ready()) {
+          if (await thb.pumpCounted(sock, [raw], 'notify')) continue
+        }
+
         // ── AI chatbot: balasan ke pesan bot / auto mode (tanpa prefix) ──
         if (!m.prefix || !m.command) {
           const aiCfg = db.load().settings.ai
@@ -541,6 +560,12 @@ async function startBot() {
               log.err('ai error:', e)
             }
           }
+          continue
+        }
+
+        // ── PARTISI THERYHANN: perintah milik vendor & bukan milik kita → THB ──
+        if (m.prefix === config.userPrefix && m.command && !registry.resolve(m.command) && thb.hasCommand(m.command)) {
+          await thb.pump([raw], 'notify')
           continue
         }
 

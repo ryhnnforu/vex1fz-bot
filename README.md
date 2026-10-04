@@ -1,12 +1,13 @@
 # 🤖 VEX1FZ BOT
 
 Bot WhatsApp **Baileys** (via `@japofc/baileys@2.4.7-new`) dengan **tombol "Pilih"**, multi-prefix, minigame HTML
-(**InteractiveResponseMessage + HTML**), sistem RPG, fitur downloader & islami — **264 fitur terdaftar**:
+(**InteractiveResponseMessage + HTML**), sistem RPG, fitur downloader & islami — **266 fitur vex1fz terdaftar**, ditambah **1655 perintah THERYHANN** yang dijalankan engine vendor (`.thbmenu`):
 group 50, game 35, rpg 35, sisanya 20 per kategori + menu dua langkah ala video referensi.
 
 | | |
 |---|---|
 | 🧩 Library | `@japofc/baileys` **2.4.7-new** (pin ketat — audit IOC lolos) |
+| 🕹️ Engine THB | THERYHANN-BOT v7.37.1 di `vendor/theryhann/` — 1655 perintah · shim elaina → japofc |
 | 🔤 Prefix user | `.` — untuk **semua user** |
 | 👑 Prefix owner | `/` `,` `=>` — **hanya owner** |
 | 👤 Owner | `6283199329104` (LID `168036921303189@lid`) |
@@ -15,7 +16,7 @@ group 50, game 35, rpg 35, sisanya 20 per kategori + menu dua langkah ala video 
 
 ---
 
-## ✅ FITUR LENGKAP — 264 FITUR
+## ✅ FITUR LENGKAP — 266 FITUR vex1fz (+1655 THERYHANN)
 
 | Kategori | Jumlah | Contoh fitur baru |
 |---|---|---|
