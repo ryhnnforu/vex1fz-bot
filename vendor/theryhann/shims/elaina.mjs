@@ -6,7 +6,7 @@
  * (dari Utils/rich-message-utils) + send() yang mengembalikan {key:{id}}.
  */
 import * as jp from '@japofc/baileys'
-import { botMetadataCertificate, botMetadataSignature } from 'file:///home/user/vex1fz-bot/node_modules/@japofc/baileys/lib/Utils/rich-message-utils.js'
+import { botMetadataCertificate, botMetadataSignature } from '../../../node_modules/@japofc/baileys/lib/Utils/rich-message-utils.js'
 
 export const areJidsSameUser = jp.areJidsSameUser
 export const jidNormalizedUser = jp.jidNormalizedUser
